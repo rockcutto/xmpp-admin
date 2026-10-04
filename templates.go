@@ -26,7 +26,7 @@ const adminTemplate = `
       <span class="nav-rail-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M16 20v-2a4 4 0 0 0-4-4H7a4 4 0 0 0-4 4v2"/><circle cx="9.5" cy="7" r="4"/><path d="M17 11a4 4 0 0 1 4 4v5"/><path d="M16 3.3a4 4 0 0 1 0 7.4"/></svg></span>
       <span class="nav-rail-label">{{tr .Lang "nav_users"}}</span>
     </a>
-    <a class="nav-rail-link" href="{{p "/admin/sessions"}}" aria-label="{{tr .Lang "sessions"}}" title="{{tr .Lang "sessions"}}">
+    <a class="nav-rail-link" href="{{p "/admin/sessions"}}" aria-label="{{tr .Lang "connections_title"}}" title="{{tr .Lang "connections_title"}}">
       <span class="nav-rail-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><path d="M12 8v5l3 2"/></svg></span>
       <span class="nav-rail-label">{{tr .Lang "nav_sessions"}}</span>
     </a>
@@ -40,6 +40,7 @@ const adminTemplate = `
     </a>
   </nav>
 </aside>
+
 <div class="app-main">
 <header class="navbar navbar-expand-md d-print-none">
   <div class="container-xl">
@@ -56,12 +57,10 @@ const adminTemplate = `
   </div>
 </header>
 
-
-
 <div class="page-wrapper">
 <div class="page-header d-print-none">
   <div class="container-xl">
-    <h2 class="page-title">{{tr .Lang "invitations"}}</h2>
+    <h1 class="page-title">{{tr .Lang "invitations"}}</h1>
     <div class="text-secondary page-subtitle">{{printf (tr .Lang "invitations_subtitle") .Domain}}</div>
   </div>
 </div>
@@ -70,27 +69,19 @@ const adminTemplate = `
 <div class="container-xl">
 
 {{if .APIError}}
-<div class="alert alert-danger">
+<div class="alert alert-danger task-error">
   <div class="fw-bold">{{tr .Lang "api_error"}}</div>
-  <div class="small mt-1">{{.APIError}}</div>
+  <details class="inline-technical">
+    <summary>{{tr .Lang "technical_details"}}</summary>
+    <code class="ops-break">{{.APIError}}</code>
+  </details>
 </div>
 {{end}}
 
-{{if .Created}}
-<div class="alert alert-success">
-  <div class="fw-bold mb-1">{{tr .Lang "invite_created"}}</div>
-  <div class="small">{{tr .Lang "native_created_note"}}</div>
-</div>
-{{end}}
-
-<div class="context-note">
-  {{tr .Lang "native_invites_note"}}
-</div>
-
-<div class="row row-cards">
-  <div class="col-lg-4">
-    <div class="card">
-      <div class="card-header"><h3 class="card-title">{{tr .Lang "new_invite"}}</h3></div>
+<div class="invite-workspace">
+  <div class="invite-sidebar">
+    <section class="card create-invite-card">
+      <div class="card-header"><h2 class="card-title">{{tr .Lang "new_invite"}}</h2></div>
       <div class="card-body">
         <form method="post" action="{{p "/admin/invites/create"}}">
           <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
@@ -102,127 +93,150 @@ const adminTemplate = `
             </div>
             <div class="form-hint">{{tr .Lang "username_optional_hint"}}</div>
           </div>
-          <button class="btn btn-primary w-100" type="submit" {{if .APIError}}disabled{{end}}>
-            {{tr .Lang "create_invite"}}
-          </button>
+          <button class="btn btn-primary w-100" type="submit" {{if .APIError}}disabled{{end}}>{{tr .Lang "create_invite"}}</button>
         </form>
         <div class="text-secondary small mt-3">{{tr .Lang "policy_from_ejabberd"}}</div>
       </div>
-    </div>
+    </section>
 
-    <div class="card mt-3">
-      <div class="card-header"><h3 class="card-title">{{tr .Lang "server_config"}}</h3></div>
+    <section class="card invitation-settings-card">
+      <div class="card-header"><h2 class="card-title">{{tr .Lang "server_config"}}</h2></div>
       <div class="card-body">
-        <dl class="row mb-0">
-          <dt class="col-5">{{tr .Lang "domain"}}</dt>
-          <dd class="col-7"><code>{{.Domain}}</code></dd>
-
-          <dt class="col-5">mod_invites</dt>
-          <dd class="col-7">
-            {{if .Server.InvitesEnabled}}
-              <span class="badge bg-green-lt">{{tr .Lang "enabled"}}</span>
-            {{else}}
-              <span class="badge bg-red-lt">{{tr .Lang "disabled"}}</span>
-            {{end}}
-          </dd>
-
-          <dt class="col-5">{{tr .Lang "access_rule"}}</dt>
-          <dd class="col-7"><code>{{if .Server.InviteAccessRule}}{{.Server.InviteAccessRule}}{{else}}none{{end}}</code></dd>
-
-          <dt class="col-5">{{tr .Lang "max_invites"}}</dt>
-          <dd class="col-7">{{.Server.InviteMaxInvites}}</dd>
-
-          <dt class="col-5">{{tr .Lang "token_ttl"}}</dt>
-          <dd class="col-7">{{.Server.InviteTTLSeconds}} {{tr .Lang "seconds"}}</dd>
-
-          <dt class="col-5">{{tr .Lang "landing_page"}}</dt>
-          <dd class="col-7"><code>{{.Server.InviteLandingPage}}</code></dd>
-
-          <dt class="col-5">{{tr .Lang "templates_dir"}}</dt>
-          <dd class="col-7">{{if .Server.InviteTemplatesDir}}<code>{{.Server.InviteTemplatesDir}}</code>{{else}}{{tr .Lang "ejabberd_default"}}{{end}}</dd>
-
-          <dt class="col-5">{{tr .Lang "site_name"}}</dt>
-          <dd class="col-7">{{if .Server.InviteSiteName}}{{.Server.InviteSiteName}}{{else}}—{{end}}</dd>
-
-          <dt class="col-5">{{tr .Lang "db_type"}}</dt>
-          <dd class="col-7"><code>{{.Server.InviteDBType}}</code></dd>
-
-          <dt class="col-5">{{tr .Lang "webchat_url"}}</dt>
-          <dd class="col-7"><code>{{.Server.InviteWebchatURL}}</code></dd>
-
-          <dt class="col-5">mod_register</dt>
-          <dd class="col-7">
-            {{if .Server.RegisterEnabled}}
-              <span class="badge bg-green-lt">{{tr .Lang "enabled"}}</span>
-            {{else}}
-              <span class="badge bg-secondary-lt">{{tr .Lang "disabled"}}</span>
-            {{end}}
-          </dd>
-
-          <dt class="col-5">{{tr .Lang "allow_modules"}}</dt>
-          <dd class="col-7">{{if .Server.RegisterAllowModules}}<code>{{join .Server.RegisterAllowModules ", "}}</code>{{else}}—{{end}}</dd>
-        </dl>
-        <hr>
-        <div class="text-secondary small">
-          {{tr .Lang "config_path"}}:<br><code>{{.ConfigPath}}</code>
+        <div class="config-summary-grid">
+          <div class="config-summary-item">
+            <div class="config-label">{{tr .Lang "domain"}}</div>
+            <div class="config-value"><code>{{.Domain}}</code></div>
+          </div>
+          <div class="config-summary-item">
+            <div class="config-label">{{tr .Lang "invitations"}}</div>
+            <div class="config-value">
+              {{if .Server.InvitesEnabled}}<span class="badge bg-green-lt">{{tr .Lang "enabled"}}</span>{{else}}<span class="badge bg-red-lt">{{tr .Lang "disabled"}}</span>{{end}}
+            </div>
+          </div>
+          <div class="config-summary-item">
+            <div class="config-label">{{tr .Lang "access_rule"}}</div>
+            <div class="config-value">{{humanAccessRule .Lang .Server.InviteAccessRule}}</div>
+          </div>
+          <div class="config-summary-item">
+            <div class="config-label">{{tr .Lang "max_invites"}}</div>
+            <div class="config-value">{{humanLimit .Lang .Server.InviteMaxInvites}}</div>
+          </div>
+          <div class="config-summary-item">
+            <div class="config-label">{{tr .Lang "token_ttl"}}</div>
+            <div class="config-value">{{humanDuration .Lang .Server.InviteTTLSeconds}}</div>
+          </div>
+          <div class="config-summary-item">
+            <div class="config-label">{{tr .Lang "landing_page"}}</div>
+            <div class="config-value">{{humanAuto .Lang .Server.InviteLandingPage}}</div>
+          </div>
         </div>
+
+        <details class="technical-details">
+          <summary>{{tr .Lang "technical_details"}}</summary>
+          <dl class="technical-grid">
+            <dt>mod_invites</dt>
+            <dd>{{if .Server.InvitesEnabled}}{{tr .Lang "enabled"}}{{else}}{{tr .Lang "disabled"}}{{end}}</dd>
+            <dt>{{tr .Lang "access_rule"}}</dt>
+            <dd><code>{{if .Server.InviteAccessRule}}{{.Server.InviteAccessRule}}{{else}}none{{end}}</code></dd>
+            <dt>{{tr .Lang "max_invites"}}</dt>
+            <dd><code>{{.Server.InviteMaxInvites}}</code></dd>
+            <dt>{{tr .Lang "token_ttl"}}</dt>
+            <dd><code>{{.Server.InviteTTLSeconds}}</code> {{tr .Lang "seconds"}}</dd>
+            <dt>{{tr .Lang "templates_dir"}}</dt>
+            <dd>{{if .Server.InviteTemplatesDir}}<code>{{.Server.InviteTemplatesDir}}</code>{{else}}{{tr .Lang "ejabberd_default"}}{{end}}</dd>
+            <dt>{{tr .Lang "site_name"}}</dt>
+            <dd>{{if .Server.InviteSiteName}}{{.Server.InviteSiteName}}{{else}}—{{end}}</dd>
+            <dt>{{tr .Lang "db_type"}}</dt>
+            <dd><code>{{.Server.InviteDBType}}</code></dd>
+            <dt>{{tr .Lang "webchat_url"}}</dt>
+            <dd><code>{{.Server.InviteWebchatURL}}</code></dd>
+            <dt>mod_register</dt>
+            <dd>{{if .Server.RegisterEnabled}}{{tr .Lang "enabled"}}{{else}}{{tr .Lang "disabled"}}{{end}}</dd>
+            <dt>{{tr .Lang "allow_modules"}}</dt>
+            <dd>{{if .Server.RegisterAllowModules}}<code>{{join .Server.RegisterAllowModules ", "}}</code>{{else}}—{{end}}</dd>
+            <dt>{{tr .Lang "config_path"}}</dt>
+            <dd><code>{{.ConfigPath}}</code></dd>
+          </dl>
+        </details>
       </div>
-    </div>
+    </section>
   </div>
 
-  <div class="col-lg-8">
+  <section class="invite-feed-section">
+    <div class="list-toolbar">
+      {{if .Invites}}
+      <div class="segmented-control" role="group" aria-label="{{tr .Lang "status"}}">
+        <button class="segment active" type="button" data-invite-filter="all">{{tr .Lang "filter_all"}}</button>
+        <button class="segment" type="button" data-invite-filter="active">{{tr .Lang "filter_active"}}</button>
+        <button class="segment" type="button" data-invite-filter="expired">{{tr .Lang "filter_expired"}}</button>
+      </div>
+      {{end}}
+      <div class="text-secondary small">{{tr .Lang "native_invites_note"}}</div>
+    </div>
+
     {{if not .APIError}}
-    <div class="card">
-      <div class="table-responsive">
-        <table class="table table-vcenter card-table invites-table responsive-data-table">
-          <thead>
-            <tr>
-              <th>{{tr .Lang "created"}}</th>
-              <th>{{tr .Lang "inviter"}}</th>
-              <th>{{tr .Lang "account_name"}}</th>
-              <th>{{tr .Lang "expires"}}</th>
-              <th>{{tr .Lang "type"}}</th>
-              <th>{{tr .Lang "status"}}</th>
-              <th></th>
-            </tr>
-          </thead>
-          <tbody>
-          {{range .Invites}}
-            <tr>
-              <td data-label="{{tr $.Lang "created"}}" class="text-nowrap invite-date"><time datetime="{{.CreatedAt}}" title="{{.CreatedAt}}">{{formatTimestamp .CreatedAt}}</time></td>
-              <td data-label="{{tr $.Lang "inviter"}}" class="invite-jid ops-break">{{if .Inviter}}{{.Inviter}}{{else}}{{tr $.Lang "server_generated"}}{{end}}</td>
-              <td data-label="{{tr $.Lang "account_name"}}">{{if .AccountName}}<code class="ops-break">{{.AccountName}}@{{$.Domain}}</code>{{else}}—{{end}}</td>
-              <td data-label="{{tr $.Lang "expires"}}" class="text-nowrap invite-date"><time datetime="{{.Expires}}" title="{{.Expires}}">{{formatTimestamp .Expires}}</time></td>
-              <td data-label="{{tr $.Lang "type"}}"><span class="badge bg-secondary-lt invite-type">{{inviteTypeLabel $.Lang .Type}}</span></td>
-              <td data-label="{{tr $.Lang "status"}}">
-                {{if .Valid}}
-                  <span class="badge bg-green-lt">{{tr $.Lang "active"}}</span>
-                {{else}}
-                  <span class="badge bg-secondary-lt">{{tr $.Lang "expired"}}</span>
-                {{end}}
-              </td>
-              <td class="text-end text-nowrap table-actions-cell">
-                <div class="invite-actions">
-                  {{with safeURL .LandingPage}}<a class="btn btn-sm btn-outline-secondary" href="{{.}}" target="_blank" rel="noreferrer noopener">{{tr $.Lang "open"}}</a>{{else}}{{with safeURL .TokenURI}}<a class="btn btn-sm btn-outline-secondary" href="{{.}}">{{tr $.Lang "open"}}</a>{{end}}{{end}}
-                  {{if .Valid}}
-                  <form method="post" action="{{p "/admin/invites/revoke"}}">
-                    <input type="hidden" name="csrf_token" value="{{$.CSRFToken}}">
-                    <input type="hidden" name="token" value="{{.Token}}">
-                    <button class="btn btn-sm btn-outline-danger" type="submit">{{tr $.Lang "revoke"}}</button>
-                  </form>
-                  {{end}}
-                </div>
-              </td>
-            </tr>
+    <div class="invite-feed" data-invite-feed>
+      {{range $idx, $invite := .Invites}}
+      <article class="invite-card {{if and $.Created (eq $idx 0)}}just-created{{end}}" data-invite-state="{{if $invite.Valid}}active{{else}}expired{{end}}">
+        {{if and $.Created (eq $idx 0)}}<div class="invite-ready-label">{{tr $.Lang "invite_ready"}}</div>{{end}}
+        <div class="invite-card-main">
+          <div class="invite-card-heading">
+            <div>
+              <div class="invite-card-title">{{inviteTypeLabel $.Lang $invite.Type}}</div>
+              <div class="invite-card-account">
+                {{if $invite.AccountName}}<code>{{$invite.AccountName}}@{{$.Domain}}</code>{{else}}{{tr $.Lang "recipient_chooses_name"}}{{end}}
+              </div>
+            </div>
+            {{if $invite.Valid}}<span class="badge bg-green-lt">{{tr $.Lang "active"}}</span>{{else}}<span class="badge bg-secondary-lt">{{tr $.Lang "expired"}}</span>{{end}}
+          </div>
+
+          <div class="invite-meta-grid">
+            <div class="invite-meta-item">
+              <span class="invite-meta-label">{{tr $.Lang "created_by"}}</span>
+              <span class="invite-meta-value ops-break">{{if $invite.Inviter}}{{$invite.Inviter}}{{else}}{{tr $.Lang "server_generated"}}{{end}}</span>
+            </div>
+            <div class="invite-meta-item">
+              <span class="invite-meta-label">{{tr $.Lang "created_when"}}</span>
+              <time class="invite-meta-value human-time" datetime="{{$invite.CreatedAt}}" data-human-time="created" title="{{formatTimestamp $invite.CreatedAt}}">{{formatTimestamp $invite.CreatedAt}}</time>
+            </div>
+            <div class="invite-meta-item">
+              <span class="invite-meta-label">{{tr $.Lang "expires_when"}}</span>
+              <time class="invite-meta-value human-time" datetime="{{$invite.Expires}}" data-human-time="expiry" title="{{formatTimestamp $invite.Expires}}">{{formatTimestamp $invite.Expires}}</time>
+            </div>
+          </div>
+        </div>
+
+        <div class="invite-card-actions">
+          {{with safeURL $invite.LandingPage}}
+            <button class="btn btn-sm btn-outline-secondary" type="button" data-copy-value="{{.}}" data-copy-label="{{tr $.Lang "copy_link"}}" data-copied-label="{{tr $.Lang "copied"}}">{{tr $.Lang "copy_link"}}</button>
+            <a class="btn btn-sm btn-outline-secondary" href="{{.}}" target="_blank" rel="noreferrer noopener">{{tr $.Lang "open"}}</a>
           {{else}}
-            <tr class="empty-row"><td colspan="7" class="text-secondary text-center py-5">{{tr $.Lang "no_invites"}}</td></tr>
+            {{with safeURL $invite.TokenURI}}
+              <button class="btn btn-sm btn-outline-secondary" type="button" data-copy-value="{{.}}" data-copy-label="{{tr $.Lang "copy_link"}}" data-copied-label="{{tr $.Lang "copied"}}">{{tr $.Lang "copy_link"}}</button>
+              <a class="btn btn-sm btn-outline-secondary" href="{{.}}">{{tr $.Lang "open"}}</a>
+            {{end}}
           {{end}}
-          </tbody>
-        </table>
+          {{if $invite.Valid}}
+          <form method="post" action="{{p "/admin/invites/revoke"}}">
+            <input type="hidden" name="csrf_token" value="{{$.CSRFToken}}">
+            <input type="hidden" name="token" value="{{$invite.Token}}">
+            <button class="btn btn-sm btn-outline-danger" type="submit">{{tr $.Lang "revoke"}}</button>
+          </form>
+          {{end}}
+        </div>
+      </article>
+      {{else}}
+      <div class="empty-state">
+        <div class="empty-state-title">{{tr $.Lang "no_invites_title"}}</div>
+        <div class="empty-state-body">{{tr $.Lang "no_invites_body"}}</div>
+      </div>
+      {{end}}
+      <div class="empty-state compact filter-empty" data-invite-filter-empty hidden>
+        <div class="empty-state-title">{{tr $.Lang "no_filtered_invites"}}</div>
       </div>
     </div>
     {{end}}
-  </div>
+  </section>
 </div>
 
 </div>
@@ -230,7 +244,6 @@ const adminTemplate = `
 </div>
 </div>
 </div>
-
 </body>
 </html>
 {{end}}

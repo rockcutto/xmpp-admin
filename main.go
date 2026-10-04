@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"sort"
 	"strings"
 	"time"
 	"unicode"
@@ -48,6 +49,10 @@ func main() {
 		"safeURL":         safeExternalURL,
 		"formatTimestamp": formatTimestamp,
 		"inviteTypeLabel": inviteTypeLabel,
+		"humanAccessRule": humanAccessRule,
+		"humanLimit":      humanLimit,
+		"humanDuration":   humanDuration,
+		"humanAuto":       humanAuto,
 	}).Parse(adminTemplate + opsTemplate)
 	if err != nil {
 		log.Fatal(err)
@@ -352,6 +357,14 @@ func (a *App) renderAdminPage(w http.ResponseWriter, r *http.Request) {
 		if err != nil {
 			data.APIError = err.Error()
 		} else {
+			sort.SliceStable(invites, func(i, j int) bool {
+				ti, errI := time.Parse(time.RFC3339Nano, invites[i].CreatedAt)
+				tj, errJ := time.Parse(time.RFC3339Nano, invites[j].CreatedAt)
+				if errI == nil && errJ == nil {
+					return ti.After(tj)
+				}
+				return invites[i].CreatedAt > invites[j].CreatedAt
+			})
 			data.Invites = invites
 		}
 	}

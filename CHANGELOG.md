@@ -32,6 +32,10 @@ The project follows semantic versioning once public releases are tagged.
 - Compact operational tables that avoid repeating username/JID/room data.
 - Mobile tab auto-centering and frontend asset revalidation so UI updates appear reliably.
 - Material 3 app shell with a compact desktop navigation rail and a labeled mobile bottom navigation bar.
+- Task-first UX pass across Invitations, Users, Connections, Rooms and Health.
+- Invitation feed cards with copy/open/revoke actions, newest-first ordering and a visible newly-created result.
+- Human-readable invitation settings and relative/localized dates, with raw server values moved into technical details.
+- Searchable compact operational lists, actionable empty states and human-facing health failures with raw API errors collapsed.
 
 ### Security
 

@@ -26,7 +26,7 @@ const opsTemplate = `
       <span class="nav-rail-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M16 20v-2a4 4 0 0 0-4-4H7a4 4 0 0 0-4 4v2"/><circle cx="9.5" cy="7" r="4"/><path d="M17 11a4 4 0 0 1 4 4v5"/><path d="M16 3.3a4 4 0 0 1 0 7.4"/></svg></span>
       <span class="nav-rail-label">{{tr .Lang "nav_users"}}</span>
     </a>
-    <a class="nav-rail-link {{if eq .Active "sessions"}}active{{end}}" href="{{p "/admin/sessions"}}" aria-label="{{tr .Lang "sessions"}}" title="{{tr .Lang "sessions"}}">
+    <a class="nav-rail-link {{if eq .Active "sessions"}}active{{end}}" href="{{p "/admin/sessions"}}" aria-label="{{tr .Lang "connections_title"}}" title="{{tr .Lang "connections_title"}}">
       <span class="nav-rail-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><path d="M12 8v5l3 2"/></svg></span>
       <span class="nav-rail-label">{{tr .Lang "nav_sessions"}}</span>
     </a>
@@ -40,6 +40,7 @@ const opsTemplate = `
     </a>
   </nav>
 </aside>
+
 <div class="app-main">
 <header class="navbar navbar-expand-md d-print-none">
   <div class="container-xl">
@@ -56,12 +57,10 @@ const opsTemplate = `
   </div>
 </header>
 
-
-
 <div class="page-wrapper">
 <div class="page-header d-print-none">
   <div class="container-xl">
-    <h2 class="page-title">{{tr .Lang .TitleKey}}</h2>
+    <h1 class="page-title">{{tr .Lang .TitleKey}}</h1>
     <div class="text-secondary page-subtitle">{{printf (tr .Lang .SubtitleKey) .Domain}}</div>
   </div>
 </div>
@@ -70,9 +69,12 @@ const opsTemplate = `
 <div class="container-xl">
 
 {{if .APIError}}
-<div class="alert alert-danger">
-  <div class="fw-bold">{{tr .Lang "data_unavailable"}}</div>
-  <div class="small mt-1 ops-break">{{.APIError}}</div>
+<div class="alert alert-danger task-error">
+  <div class="fw-bold">{{if .APIErrorTitle}}{{.APIErrorTitle}}{{else}}{{tr .Lang "data_unavailable"}}{{end}}</div>
+  <details class="inline-technical">
+    <summary>{{tr .Lang "technical_details"}}</summary>
+    <code class="ops-break">{{.APIError}}</code>
+  </details>
 </div>
 {{end}}
 
@@ -82,108 +84,159 @@ const opsTemplate = `
 
 {{if eq .Active "users"}}
 {{if not .APIError}}
-<div class="card">
-  <div class="card-header ops-card-header">
-    <h3 class="card-title">{{tr .Lang "registered_accounts"}}</h3>
-    <span class="badge bg-secondary-lt">{{len .Users}}</span>
+<section class="data-section">
+  {{if .Users}}
+  <div class="list-toolbar data-toolbar">
+    <label class="search-box">
+      <span class="sr-only">{{tr .Lang "search"}}</span>
+      <svg aria-hidden="true" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6"/><path d="m16 16 4 4"/></svg>
+      <input type="search" placeholder="{{tr .Lang "search_users_placeholder"}}" data-list-filter="users-list" autocomplete="off">
+    </label>
+    <span class="count-chip">{{len .Users}}</span>
   </div>
-  <div class="table-responsive">
-    <table class="table table-vcenter card-table ops-table responsive-data-table">
-      <thead><tr>
-        <th>{{tr .Lang "account"}}</th>
-        <th>{{tr .Lang "connection"}}</th>
-        <th class="text-end">{{tr .Lang "sessions"}}</th>
-      </tr></thead>
-      <tbody>
-      {{range .Users}}
-        <tr>
-          <td data-label="{{tr $.Lang "account"}}">
-            <div class="cell-primary">{{.Username}}</div>
-            <div class="cell-secondary">{{.JID}}</div>
-          </td>
-          <td data-label="{{tr $.Lang "connection"}}">
-            {{if eq .SessionState "online"}}<span class="badge bg-green-lt">{{tr $.Lang "connected"}}</span>
-            {{else if eq .SessionState "offline"}}<span class="badge bg-secondary-lt">{{tr $.Lang "not_connected"}}</span>
-            {{else}}<span class="badge bg-secondary-lt">—</span>{{end}}
-          </td>
-          <td data-label="{{tr $.Lang "sessions"}}" class="text-end numeric-cell">{{if eq .SessionState "unknown"}}—{{else}}{{.SessionCount}}{{end}}</td>
-        </tr>
-      {{else}}
-        <tr class="empty-row"><td colspan="3" class="text-secondary text-center py-5">{{tr $.Lang "no_users"}}</td></tr>
-      {{end}}
-      </tbody>
-    </table>
+  {{end}}
+  <div class="card compact-data-card">
+    <div class="table-responsive">
+      <table class="table table-vcenter card-table ops-table responsive-data-table">
+        <thead><tr>
+          <th>{{tr .Lang "account"}}</th>
+          <th>{{tr .Lang "connection"}}</th>
+          <th class="text-end">{{tr .Lang "sessions"}}</th>
+        </tr></thead>
+        <tbody id="users-list">
+        {{range .Users}}
+          <tr data-filter-row data-filter-text="{{.Username}} {{.JID}} {{.SessionState}}">
+            <td data-label="{{tr $.Lang "account"}}">
+              <div class="cell-primary">{{.Username}}</div>
+              <div class="cell-secondary">{{.JID}}</div>
+            </td>
+            <td data-label="{{tr $.Lang "connection"}}">
+              {{if eq .SessionState "online"}}<span class="badge bg-green-lt">{{tr $.Lang "connected"}}</span>
+              {{else if eq .SessionState "offline"}}<span class="badge bg-secondary-lt">{{tr $.Lang "not_connected"}}</span>
+              {{else}}<span class="badge bg-secondary-lt">—</span>{{end}}
+            </td>
+            <td data-label="{{tr $.Lang "sessions"}}" class="text-end numeric-cell">{{if eq .SessionState "unknown"}}—{{else}}{{.SessionCount}}{{end}}</td>
+          </tr>
+        {{else}}
+          <tr class="empty-row"><td colspan="3">
+            <div class="empty-state compact">
+              <div class="empty-state-title">{{tr $.Lang "no_users_title"}}</div>
+              <div class="empty-state-body">{{tr $.Lang "no_users_body"}}</div>
+            </div>
+          </td></tr>
+        {{end}}
+        </tbody>
+      </table>
+    </div>
+    <div class="empty-state compact filter-empty" data-filter-empty="users-list" hidden>
+      <div class="empty-state-title">{{tr .Lang "nothing_found"}}</div>
+      <div class="empty-state-body">{{tr .Lang "try_different_search"}}</div>
+    </div>
   </div>
-</div>
+</section>
 {{end}}
 {{end}}
 
 {{if eq .Active "sessions"}}
 {{if not .APIError}}
-<div class="card">
-  <div class="card-header ops-card-header">
-    <h3 class="card-title">{{tr .Lang "active_sessions"}}</h3>
-    <span class="badge bg-green-lt">{{len .Sessions}}</span>
+<section class="data-section">
+  {{if .Sessions}}
+  <div class="list-toolbar data-toolbar">
+    <label class="search-box">
+      <span class="sr-only">{{tr .Lang "search"}}</span>
+      <svg aria-hidden="true" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6"/><path d="m16 16 4 4"/></svg>
+      <input type="search" placeholder="{{tr .Lang "search_sessions_placeholder"}}" data-list-filter="sessions-list" autocomplete="off">
+    </label>
+    <span class="count-chip">{{len .Sessions}}</span>
   </div>
-  <div class="table-responsive">
-    <table class="table table-vcenter card-table ops-table responsive-data-table">
-      <thead><tr>
-        <th>{{tr .Lang "account"}}</th>
-        <th>{{tr .Lang "resource"}}</th>
-      </tr></thead>
-      <tbody>
-      {{range .Sessions}}
-        <tr>
-          <td data-label="{{tr $.Lang "account"}}">
-            <div class="cell-primary">{{.Username}}</div>
-            <div class="cell-secondary ops-break">{{.JID}}</div>
-          </td>
-          <td data-label="{{tr $.Lang "resource"}}">{{if .Resource}}<code class="ops-break">{{.Resource}}</code>{{else}}—{{end}}</td>
-        </tr>
-      {{else}}
-        <tr class="empty-row"><td colspan="2" class="text-secondary text-center py-5">{{tr $.Lang "no_sessions"}}</td></tr>
-      {{end}}
-      </tbody>
-    </table>
+  {{end}}
+  <div class="card compact-data-card">
+    <div class="table-responsive">
+      <table class="table table-vcenter card-table ops-table responsive-data-table">
+        <thead><tr>
+          <th>{{tr .Lang "account"}}</th>
+          <th>{{tr .Lang "resource"}}</th>
+        </tr></thead>
+        <tbody id="sessions-list">
+        {{range .Sessions}}
+          <tr data-filter-row data-filter-text="{{.Username}} {{.JID}} {{.Resource}}">
+            <td data-label="{{tr $.Lang "account"}}">
+              <div class="cell-primary">{{.Username}}</div>
+              <div class="cell-secondary ops-break">{{.JID}}</div>
+            </td>
+            <td data-label="{{tr $.Lang "resource"}}">{{if .Resource}}<code class="ops-break">{{.Resource}}</code>{{else}}—{{end}}</td>
+          </tr>
+        {{else}}
+          <tr class="empty-row"><td colspan="2">
+            <div class="empty-state compact">
+              <div class="empty-state-title">{{tr $.Lang "no_sessions_title"}}</div>
+              <div class="empty-state-body">{{tr $.Lang "no_sessions_body"}}</div>
+            </div>
+          </td></tr>
+        {{end}}
+        </tbody>
+      </table>
+    </div>
+    <div class="empty-state compact filter-empty" data-filter-empty="sessions-list" hidden>
+      <div class="empty-state-title">{{tr .Lang "nothing_found"}}</div>
+      <div class="empty-state-body">{{tr .Lang "try_different_search"}}</div>
+    </div>
   </div>
-</div>
+</section>
 {{end}}
 {{end}}
 
 {{if eq .Active "rooms"}}
 {{if not .APIError}}
-<div class="card">
-  <div class="card-header ops-card-header">
-    <h3 class="card-title">{{tr .Lang "online_rooms"}}</h3>
-    <span class="badge bg-green-lt">{{len .Rooms}}</span>
+<section class="data-section">
+  {{if .Rooms}}
+  <div class="list-toolbar data-toolbar">
+    <label class="search-box">
+      <span class="sr-only">{{tr .Lang "search"}}</span>
+      <svg aria-hidden="true" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6"/><path d="m16 16 4 4"/></svg>
+      <input type="search" placeholder="{{tr .Lang "search_rooms_placeholder"}}" data-list-filter="rooms-list" autocomplete="off">
+    </label>
+    <span class="count-chip">{{len .Rooms}}</span>
   </div>
-  <div class="table-responsive">
-    <table class="table table-vcenter card-table ops-table responsive-data-table">
-      <thead><tr>
-        <th>{{tr .Lang "room"}}</th>
-        <th>{{tr .Lang "service"}}</th>
-      </tr></thead>
-      <tbody>
-      {{range .Rooms}}
-        <tr>
-          <td data-label="{{tr $.Lang "room"}}">
-            <div class="cell-primary">{{.Name}}</div>
-            <div class="cell-secondary ops-break">{{.JID}}</div>
-          </td>
-          <td data-label="{{tr $.Lang "service"}}"><code class="ops-break">{{.Service}}</code></td>
-        </tr>
-      {{else}}
-        <tr class="empty-row"><td colspan="2" class="text-secondary text-center py-5">{{tr $.Lang "no_rooms"}}</td></tr>
-      {{end}}
-      </tbody>
-    </table>
+  {{end}}
+  <div class="card compact-data-card">
+    <div class="table-responsive">
+      <table class="table table-vcenter card-table ops-table responsive-data-table">
+        <thead><tr>
+          <th>{{tr .Lang "room"}}</th>
+          <th>{{tr .Lang "service"}}</th>
+        </tr></thead>
+        <tbody id="rooms-list">
+        {{range .Rooms}}
+          <tr data-filter-row data-filter-text="{{.Name}} {{.JID}} {{.Service}}">
+            <td data-label="{{tr $.Lang "room"}}">
+              <div class="cell-primary">{{.Name}}</div>
+              <div class="cell-secondary ops-break">{{.JID}}</div>
+            </td>
+            <td data-label="{{tr $.Lang "service"}}"><code class="ops-break">{{.Service}}</code></td>
+          </tr>
+        {{else}}
+          <tr class="empty-row"><td colspan="2">
+            <div class="empty-state compact">
+              <div class="empty-state-title">{{tr $.Lang "no_rooms_title"}}</div>
+              <div class="empty-state-body">{{tr $.Lang "no_rooms_body"}}</div>
+            </div>
+          </td></tr>
+        {{end}}
+        </tbody>
+      </table>
+    </div>
+    <div class="empty-state compact filter-empty" data-filter-empty="rooms-list" hidden>
+      <div class="empty-state-title">{{tr .Lang "nothing_found"}}</div>
+      <div class="empty-state-body">{{tr .Lang "try_different_search"}}</div>
+    </div>
   </div>
-</div>
+</section>
 {{end}}
 {{end}}
 
 {{if eq .Active "health"}}
-<div class="metric-grid">
+<div class="metric-grid health-metrics">
   <div class="metric-card">
     <div class="metric-label">{{tr .Lang "registered_users_metric"}}</div>
     <div class="metric-value">{{.RegisteredMetric}}</div>
@@ -202,31 +255,30 @@ const opsTemplate = `
   </div>
 </div>
 
-<div class="card mt-3">
-  <div class="card-header"><h3 class="card-title">{{tr .Lang "checks"}}</h3></div>
-  <div class="table-responsive">
-    <table class="table table-vcenter card-table ops-table responsive-data-table health-table">
-      <thead><tr>
-        <th>{{tr .Lang "component"}}</th>
-        <th>{{tr .Lang "status"}}</th>
-        <th>{{tr .Lang "detail"}}</th>
-      </tr></thead>
-      <tbody>
-      {{range .Health}}
-        <tr>
-          <td data-label="{{tr $.Lang "component"}}"><div class="cell-primary">{{.Name}}</div></td>
-          <td data-label="{{tr $.Lang "status"}}">
-            {{if eq .State "ok"}}<span class="badge bg-green-lt">{{tr $.Lang .StateKey}}</span>
-            {{else if eq .State "warn"}}<span class="badge bg-warning-lt">{{tr $.Lang .StateKey}}</span>
-            {{else}}<span class="badge bg-red-lt">{{tr $.Lang .StateKey}}</span>{{end}}
-          </td>
-          <td data-label="{{tr $.Lang "detail"}}" class="ops-break text-secondary">{{.Detail}}</td>
-        </tr>
-      {{end}}
-      </tbody>
-    </table>
+<section class="health-section">
+  <h2 class="section-title">{{tr .Lang "checks"}}</h2>
+  <div class="health-list">
+    {{range .Health}}
+    <article class="health-row health-{{.State}}">
+      <div class="health-row-main">
+        <div class="health-row-heading">
+          <div class="health-name">{{.Name}}</div>
+          {{if eq .State "ok"}}<span class="badge bg-green-lt">{{tr $.Lang .StateKey}}</span>
+          {{else if eq .State "warn"}}<span class="badge bg-warning-lt">{{tr $.Lang .StateKey}}</span>
+          {{else}}<span class="badge bg-red-lt">{{tr $.Lang .StateKey}}</span>{{end}}
+        </div>
+        <div class="health-summary">{{.Summary}}</div>
+        {{if .Technical}}
+        <details class="inline-technical">
+          <summary>{{tr $.Lang "technical_details"}}</summary>
+          <code class="ops-break">{{.Technical}}</code>
+        </details>
+        {{end}}
+      </div>
+    </article>
+    {{end}}
   </div>
-</div>
+</section>
 {{end}}
 
 </div>

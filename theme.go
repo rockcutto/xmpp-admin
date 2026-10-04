@@ -725,18 +725,20 @@ html[data-theme="dark"] .m3-theme-icon::before { content: "☀"; }
   display: grid;
   place-items: center;
   flex: 0 0 auto;
+  border: 1px solid var(--m3-outline-variant);
   border-radius: 15px;
-  background: var(--m3-on-surface);
-  color: var(--m3-surface);
+  background: var(--m3-surface-container-high);
+  color: var(--m3-on-surface);
   text-decoration: none;
-  font-size: 17px;
+  font-size: 15px;
   font-weight: 750;
   letter-spacing: -.03em;
 }
 
 .nav-rail-brand:hover {
-  color: var(--m3-surface);
-  opacity: .9;
+  color: var(--m3-on-surface);
+  background: var(--m3-surface-container-highest);
+  opacity: 1;
 }
 
 .nav-rail-items {
@@ -773,7 +775,7 @@ html[data-theme="dark"] .m3-theme-icon::before { content: "☀"; }
 
 .nav-rail-link.active {
   color: var(--m3-on-surface);
-  background: var(--m3-surface-container-highest);
+  background: transparent;
 }
 
 .nav-rail-icon {
@@ -785,8 +787,11 @@ html[data-theme="dark"] .m3-theme-icon::before { content: "☀"; }
 }
 
 .nav-rail-link.active .nav-rail-icon {
-  background: color-mix(in srgb, var(--m3-primary) 13%, var(--m3-surface-container-highest));
-  color: var(--m3-primary);
+  width: 48px;
+  height: 36px;
+  border-radius: var(--m3-radius-full);
+  background: var(--m3-primary-container);
+  color: var(--m3-on-primary-container);
 }
 
 .nav-rail-icon svg {
@@ -907,6 +912,511 @@ html[data-theme="dark"] .m3-theme-icon::before { content: "☀"; }
   }
 }
 
+/* Task-first administration surfaces. */
+.sr-only {
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  padding: 0 !important;
+  margin: -1px !important;
+  overflow: hidden !important;
+  clip: rect(0, 0, 0, 0) !important;
+  white-space: nowrap !important;
+  border: 0 !important;
+}
+
+.page-header {
+  padding-top: 26px;
+  padding-bottom: 16px;
+}
+
+.section-title {
+  margin: 0 0 10px;
+  color: var(--m3-on-surface);
+  font-size: 17px;
+  font-weight: 650;
+}
+
+.invite-workspace {
+  display: grid;
+  grid-template-columns: minmax(300px, 360px) minmax(0, 1fr);
+  gap: 18px;
+  align-items: start;
+}
+
+.invite-sidebar {
+  display: grid;
+  gap: 14px;
+  min-width: 0;
+}
+
+.invite-feed-section {
+  min-width: 0;
+}
+
+.list-toolbar {
+  min-height: 44px;
+  margin-bottom: 10px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  justify-content: space-between;
+}
+
+.segmented-control {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 3px;
+  border-radius: var(--m3-radius-full);
+  background: var(--m3-surface-container-high);
+}
+
+.segment {
+  min-height: 34px;
+  padding: 6px 13px;
+  border: 0;
+  border-radius: var(--m3-radius-full);
+  background: transparent;
+  color: var(--m3-on-surface-variant);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 650;
+  cursor: pointer;
+}
+
+.segment:hover {
+  color: var(--m3-on-surface);
+}
+
+.segment.active {
+  background: var(--m3-primary-container);
+  color: var(--m3-on-primary-container);
+}
+
+.invite-feed {
+  display: grid;
+  gap: 10px;
+}
+
+.invite-card {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid var(--m3-outline-variant);
+  border-radius: 18px;
+  background: var(--m3-surface-container-low);
+}
+
+.invite-card.just-created {
+  border-color: color-mix(in srgb, var(--m3-primary) 68%, var(--m3-outline-variant));
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--m3-primary) 12%, transparent);
+}
+
+.invite-card[data-invite-state="expired"] {
+  background: color-mix(in srgb, var(--m3-surface-container-low) 72%, var(--m3-surface));
+}
+
+.invite-card[data-invite-state="expired"] .invite-card-title {
+  color: var(--m3-on-surface-variant);
+  font-weight: 600;
+}
+
+.invite-ready-label {
+  padding: 8px 16px;
+  background: var(--m3-primary-container);
+  color: var(--m3-on-primary-container);
+  font-size: 11px;
+  font-weight: 750;
+  letter-spacing: .01em;
+}
+
+.invite-card-main {
+  padding: 15px 16px 12px;
+}
+
+.invite-card-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.invite-card-title {
+  color: var(--m3-on-surface);
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.invite-card-account {
+  margin-top: 4px;
+  color: var(--m3-on-surface-variant);
+  font-size: 12px;
+}
+
+.invite-meta-grid {
+  margin-top: 13px;
+  display: grid;
+  grid-template-columns: minmax(0, 1.3fr) minmax(130px, .85fr) minmax(130px, .85fr);
+  gap: 10px 16px;
+}
+
+.invite-meta-item {
+  min-width: 0;
+  display: grid;
+  gap: 3px;
+}
+
+.invite-meta-label,
+.config-label {
+  color: var(--m3-on-surface-variant);
+  font-size: 10px;
+  font-weight: 650;
+  letter-spacing: .02em;
+}
+
+.invite-meta-value {
+  min-width: 0;
+  color: var(--m3-on-surface);
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.invite-card-actions {
+  padding: 10px 12px 12px;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  border-top: 1px solid var(--m3-outline-variant);
+}
+
+.invite-card-actions form {
+  margin: 0;
+}
+
+.config-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 9px;
+}
+
+.config-summary-item {
+  min-width: 0;
+  padding: 10px 11px;
+  border-radius: 12px;
+  background: var(--m3-surface-container);
+}
+
+.config-value {
+  margin-top: 5px;
+  min-width: 0;
+  color: var(--m3-on-surface);
+  font-size: 13px;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.technical-details {
+  margin-top: 13px;
+  border-top: 1px solid var(--m3-outline-variant);
+  padding-top: 10px;
+}
+
+.technical-details > summary,
+.inline-technical > summary {
+  color: var(--m3-on-surface-variant);
+  font-size: 11px;
+  font-weight: 650;
+  cursor: pointer;
+  user-select: none;
+}
+
+.technical-grid {
+  margin: 10px 0 0;
+  display: grid;
+  grid-template-columns: minmax(105px, .8fr) minmax(0, 1.2fr);
+  gap: 7px 10px;
+  font-size: 11px;
+}
+
+.technical-grid dt,
+.technical-grid dd {
+  min-width: 0;
+  margin: 0;
+}
+
+.technical-grid dd {
+  overflow-wrap: anywhere;
+}
+
+.data-section {
+  min-width: 0;
+}
+
+.data-toolbar {
+  justify-content: flex-start;
+}
+
+.search-box {
+  width: min(520px, 100%);
+  min-height: 42px;
+  padding: 0 13px;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  border: 1px solid var(--m3-outline-variant);
+  border-radius: var(--m3-radius-full);
+  background: var(--m3-surface-container-lowest);
+}
+
+.search-box:focus-within {
+  border-color: var(--m3-primary);
+  box-shadow: 0 0 0 3px var(--m3-focus);
+}
+
+.search-box svg {
+  width: 18px;
+  height: 18px;
+  flex: 0 0 auto;
+  fill: none;
+  stroke: var(--m3-on-surface-variant);
+  stroke-width: 1.8;
+  stroke-linecap: round;
+}
+
+.search-box input {
+  width: 100%;
+  min-width: 0;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: var(--m3-on-surface);
+  font: inherit;
+  font-size: 13px;
+}
+
+.search-box input::placeholder {
+  color: var(--m3-on-surface-variant);
+}
+
+.count-chip {
+  min-width: 30px;
+  height: 30px;
+  padding: 0 9px;
+  display: inline-grid;
+  place-items: center;
+  border-radius: var(--m3-radius-full);
+  background: var(--m3-surface-container-high);
+  color: var(--m3-on-surface-variant);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.compact-data-card {
+  border-radius: 18px;
+}
+
+.compact-data-card .table thead th {
+  padding-top: 10px;
+  padding-bottom: 10px;
+}
+
+.compact-data-card .table tbody td {
+  padding-top: 10px;
+  padding-bottom: 10px;
+}
+
+.empty-state {
+  padding: 48px 20px;
+  text-align: center;
+  color: var(--m3-on-surface-variant);
+}
+
+.empty-state.compact {
+  padding: 28px 18px;
+}
+
+.empty-state-title {
+  color: var(--m3-on-surface);
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.empty-state-body {
+  margin-top: 5px;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.filter-empty[hidden] {
+  display: none !important;
+}
+
+.health-section {
+  margin-top: 20px;
+}
+
+.health-list {
+  overflow: hidden;
+  border: 1px solid var(--m3-outline-variant);
+  border-radius: 18px;
+  background: var(--m3-surface-container-low);
+}
+
+.health-row {
+  padding: 13px 15px;
+  border-bottom: 1px solid var(--m3-outline-variant);
+}
+
+.health-row:last-child {
+  border-bottom: 0;
+}
+
+.health-row.health-error {
+  box-shadow: inset 3px 0 0 var(--m3-error);
+}
+
+.health-row.health-warn {
+  box-shadow: inset 3px 0 0 color-mix(in srgb, #f9a825 78%, var(--m3-outline));
+}
+
+.health-row-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.health-name {
+  color: var(--m3-on-surface);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.health-summary {
+  margin-top: 4px;
+  color: var(--m3-on-surface-variant);
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.inline-technical {
+  margin-top: 7px;
+}
+
+.inline-technical code {
+  display: block;
+  margin-top: 6px;
+  padding: 7px 9px;
+  font-size: 10px;
+  line-height: 1.4;
+}
+
+.task-error .inline-technical {
+  margin-top: 8px;
+}
+
+@media (max-width: 1099.98px) {
+  .invite-workspace {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .invite-sidebar {
+    display: contents;
+  }
+
+  .create-invite-card { order: 1; width: 100%; }
+  .invite-feed-section { order: 2; width: 100%; }
+  .invitation-settings-card { order: 3; width: 100%; }
+
+  .config-summary-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 767.98px) {
+  .page-header {
+    padding-top: 18px;
+    padding-bottom: 12px;
+  }
+
+  .list-toolbar {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .segmented-control {
+    width: 100%;
+  }
+
+  .segment {
+    flex: 1 1 0;
+    padding-left: 8px;
+    padding-right: 8px;
+  }
+
+  .invite-meta-grid {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+
+  .invite-card-actions .btn {
+    min-height: 38px;
+  }
+
+  .config-summary-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .technical-grid {
+    grid-template-columns: 1fr;
+    gap: 3px;
+  }
+
+  .technical-grid dd {
+    margin-bottom: 7px;
+  }
+
+  .data-toolbar {
+    flex-direction: row;
+    align-items: center;
+  }
+
+  .search-box {
+    min-width: 0;
+  }
+
+  .health-row {
+    padding: 12px 13px;
+  }
+
+  .nav-rail-link.active .nav-rail-icon {
+    width: 48px;
+    height: 30px;
+  }
+}
+
+@media (max-width: 420px) {
+  .config-summary-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .invite-card-heading {
+    gap: 8px;
+  }
+
+  .invite-card-actions {
+    align-items: stretch;
+  }
+
+  .invite-card-actions .btn,
+  .invite-card-actions form,
+  .invite-card-actions form .btn {
+    width: 100%;
+  }
+}
+
 @media print {
   .d-print-none { display: none !important; }
 }
@@ -942,10 +1452,148 @@ const themeJS = `
     }
   }
 
+  function formatHumanTimes() {
+    const lang = (root.lang || "en").toLowerCase();
+    const locale = lang.startsWith("ru") ? "ru-RU" : "en-GB";
+    const now = new Date();
+    const timeFormat = new Intl.DateTimeFormat(locale, { hour: "2-digit", minute: "2-digit" });
+    const dateFormat = new Intl.DateTimeFormat(locale, { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" });
+    const relative = new Intl.RelativeTimeFormat(locale, { numeric: "auto" });
+
+    const dayNumber = (date) => Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()) / 86400000;
+
+    document.querySelectorAll("time[data-human-time]").forEach((el) => {
+      const date = new Date(el.getAttribute("datetime"));
+      if (Number.isNaN(date.getTime())) return;
+      const days = Math.round(dayNumber(date) - dayNumber(now));
+      const kind = el.dataset.humanTime;
+
+      if (kind === "created") {
+        if (days === 0) {
+          el.textContent = (lang.startsWith("ru") ? "Сегодня, " : "Today, ") + timeFormat.format(date);
+        } else if (days === -1) {
+          el.textContent = (lang.startsWith("ru") ? "Вчера, " : "Yesterday, ") + timeFormat.format(date);
+        } else {
+          el.textContent = dateFormat.format(date);
+        }
+        return;
+      }
+
+      if (kind === "expiry" && Math.abs(days) <= 14) {
+        el.textContent = relative.format(days, "day") + " · " + timeFormat.format(date);
+      } else {
+        el.textContent = dateFormat.format(date);
+      }
+    });
+  }
+
+  async function copyText(value) {
+    if (navigator.clipboard && window.isSecureContext) {
+      await navigator.clipboard.writeText(value);
+      return;
+    }
+    const area = document.createElement("textarea");
+    area.value = value;
+    area.setAttribute("readonly", "");
+    area.style.position = "fixed";
+    area.style.opacity = "0";
+    document.body.appendChild(area);
+    area.select();
+    document.execCommand("copy");
+    area.remove();
+  }
+
+  function wireCopyButtons() {
+    document.querySelectorAll("[data-copy-value]").forEach((button) => {
+      button.addEventListener("click", async () => {
+        const value = button.dataset.copyValue || "";
+        if (!value) return;
+        try {
+          await copyText(value);
+          const original = button.dataset.copyLabel || button.textContent;
+          button.textContent = button.dataset.copiedLabel || original;
+          window.setTimeout(() => { button.textContent = original; }, 1400);
+        } catch (_) {
+          // Keep the original label if the browser blocks clipboard access.
+        }
+      });
+    });
+  }
+
+  function wireInviteFilters() {
+    const feed = document.querySelector("[data-invite-feed]");
+    if (!feed) return;
+    const buttons = document.querySelectorAll("[data-invite-filter]");
+    const empty = feed.querySelector("[data-invite-filter-empty]");
+    const cards = feed.querySelectorAll(".invite-card[data-invite-state]");
+    if (cards.length === 0) return;
+
+    const applyFilter = (filter) => {
+      let visible = 0;
+      cards.forEach((card) => {
+        const show = filter === "all" || card.dataset.inviteState === filter;
+        card.hidden = !show;
+        if (show) visible += 1;
+      });
+      if (empty) empty.hidden = visible !== 0;
+      buttons.forEach((button) => button.classList.toggle("active", button.dataset.inviteFilter === filter));
+    };
+
+    buttons.forEach((button) => {
+      button.addEventListener("click", () => applyFilter(button.dataset.inviteFilter || "all"));
+    });
+  }
+
+  function wireListFilters() {
+    document.querySelectorAll("[data-list-filter]").forEach((input) => {
+      const id = input.dataset.listFilter;
+      const list = document.getElementById(id);
+      const empty = document.querySelector('[data-filter-empty="' + id + '"]');
+      if (!list) return;
+      const rows = list.querySelectorAll("[data-filter-row]");
+      if (rows.length === 0) return;
+
+      const run = () => {
+        const query = input.value.trim().toLocaleLowerCase();
+        let visible = 0;
+        rows.forEach((row) => {
+          const haystack = (row.dataset.filterText || row.textContent || "").toLocaleLowerCase();
+          const show = query === "" || haystack.includes(query);
+          row.hidden = !show;
+          if (show) visible += 1;
+        });
+        if (empty) empty.hidden = query === "" || visible !== 0;
+      };
+
+      input.addEventListener("input", run);
+    });
+  }
+
   apply(effectiveTheme());
 
   document.addEventListener("DOMContentLoaded", () => {
     apply(effectiveTheme());
+    formatHumanTimes();
+    wireCopyButtons();
+    wireInviteFilters();
+    wireListFilters();
+
+    const created = document.querySelector(".invite-card.just-created");
+    if (created) {
+      const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      window.setTimeout(() => {
+        created.scrollIntoView({ block: "center", behavior: reducedMotion ? "auto" : "smooth" });
+      }, 60);
+      try {
+        const current = new URL(window.location.href);
+        if (current.searchParams.get("created") === "1") {
+          current.searchParams.delete("created");
+          history.replaceState(null, "", current.pathname + current.search + current.hash);
+        }
+      } catch (_) {
+        // URL cleanup is cosmetic only.
+      }
+    }
 
     const button = document.querySelector("[data-theme-toggle]");
     if (button) {
@@ -954,7 +1602,7 @@ const themeJS = `
         try {
           localStorage.setItem(key, next);
         } catch (_) {
-          // Storage can be disabled by browser policy; theme switching still works for this page.
+          // Storage can be disabled by browser policy; switching still works for this page.
         }
         apply(next);
       });

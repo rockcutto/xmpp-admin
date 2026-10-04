@@ -2,9 +2,11 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 )
 
@@ -98,5 +100,15 @@ func TestReadOnlyOperationsAPIWire(t *testing.T) {
 
 	if err := client.Status(ctx); err != nil {
 		t.Fatal(err)
+	}
+}
+
+func TestAPIProblemExplainsForbiddenAccess(t *testing.T) {
+	summary, technical := apiProblem(langRU, "users", fmt.Errorf("ejabberd API registered_users failed: HTTP 403"))
+	if summary != "У XMPP Admin нет права читать список пользователей." {
+		t.Fatalf("unexpected summary: %q", summary)
+	}
+	if !strings.Contains(technical, "HTTP 403") {
+		t.Fatalf("technical detail must preserve HTTP status: %q", technical)
 	}
 }

@@ -41,6 +41,24 @@ func TestInvitePresentationHelpers(t *testing.T) {
 	}
 }
 
+func TestHumanConfigPresentation(t *testing.T) {
+	if got := humanAccessRule(langRU, "all"); got != "Все пользователи" {
+		t.Fatalf("unexpected access label: %q", got)
+	}
+	if got := humanLimit(langRU, "infinity"); got != "Без лимита" {
+		t.Fatalf("unexpected limit label: %q", got)
+	}
+	if got := humanDuration(langRU, 432000); got != "5 дней" {
+		t.Fatalf("unexpected duration label: %q", got)
+	}
+	if got := humanDuration(langEN, 3600); got != "1 hour" {
+		t.Fatalf("unexpected EN duration label: %q", got)
+	}
+	if got := humanAuto(langRU, "auto"); got != "Автоматически" {
+		t.Fatalf("unexpected auto label: %q", got)
+	}
+}
+
 func TestBasePath(t *testing.T) {
 	cases := map[string]string{
 		"":            "",
@@ -90,6 +108,10 @@ func TestTemplatesParse(t *testing.T) {
 		"safeURL":         safeExternalURL,
 		"formatTimestamp": formatTimestamp,
 		"inviteTypeLabel": inviteTypeLabel,
+		"humanAccessRule": humanAccessRule,
+		"humanLimit":      humanLimit,
+		"humanDuration":   humanDuration,
+		"humanAuto":       humanAuto,
 	}).Parse(adminTemplate + opsTemplate)
 	if err != nil {
 		t.Fatal(err)

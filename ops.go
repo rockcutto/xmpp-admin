@@ -28,24 +28,26 @@ type RoomRow struct {
 }
 
 type HealthCheck struct {
-	Name     string
-	State    string
-	StateKey string
-	Detail   string
+	Name      string
+	State     string
+	StateKey  string
+	Summary   string
+	Technical string
 }
 
 type OpsPageData struct {
-	Lang          string
-	Active        string
-	CurrentPath   string
-	TitleKey      string
-	SubtitleKey   string
-	Domain        string
-	APIError      string
-	Warnings      []string
-	Users         []UserRow
-	Sessions      []SessionRow
-	Rooms         []RoomRow
+	Lang                 string
+	Active               string
+	CurrentPath          string
+	TitleKey             string
+	SubtitleKey          string
+	Domain               string
+	APIError             string
+	APIErrorTitle        string
+	Warnings             []string
+	Users                []UserRow
+	Sessions             []SessionRow
+	Rooms                []RoomRow
 	Health               []HealthCheck
 	RegisteredMetric     string
 	OnlineSessionsMetric string
@@ -69,7 +71,7 @@ func (a *App) adminUsers(w http.ResponseWriter, r *http.Request) {
 
 	users, err := a.ejabberd.RegisteredUsers(r.Context(), a.cfg.Domain)
 	if err != nil {
-		data.APIError = err.Error()
+		data.APIErrorTitle, data.APIError = apiProblem(lang, "users", err)
 		a.renderOps(w, data)
 		return
 	}
@@ -111,18 +113,19 @@ func (a *App) adminSessions(w http.ResponseWriter, r *http.Request) {
 	if !a.requireAdminGET(w, r, "/admin/sessions") {
 		return
 	}
+	lang := requestLanguage(r)
 	data := OpsPageData{
-		Lang:        requestLanguage(r),
+		Lang:        lang,
 		Active:      "sessions",
 		CurrentPath: "/admin/sessions",
-		TitleKey:    "sessions",
+		TitleKey:    "connections_title",
 		SubtitleKey: "sessions_subtitle",
 		Domain:      a.cfg.Domain,
 	}
 
 	sessions, err := a.ejabberd.ConnectedUsers(r.Context())
 	if err != nil {
-		data.APIError = err.Error()
+		data.APIErrorTitle, data.APIError = apiProblem(lang, "sessions", err)
 		a.renderOps(w, data)
 		return
 	}
@@ -134,8 +137,9 @@ func (a *App) adminRooms(w http.ResponseWriter, r *http.Request) {
 	if !a.requireAdminGET(w, r, "/admin/rooms") {
 		return
 	}
+	lang := requestLanguage(r)
 	data := OpsPageData{
-		Lang:        requestLanguage(r),
+		Lang:        lang,
 		Active:      "rooms",
 		CurrentPath: "/admin/rooms",
 		TitleKey:    "rooms",
@@ -145,7 +149,7 @@ func (a *App) adminRooms(w http.ResponseWriter, r *http.Request) {
 
 	rooms, err := a.ejabberd.MUCOnlineRooms(r.Context(), "global")
 	if err != nil {
-		data.APIError = err.Error()
+		data.APIErrorTitle, data.APIError = apiProblem(lang, "rooms", err)
 		a.renderOps(w, data)
 		return
 	}
@@ -163,12 +167,12 @@ func (a *App) adminHealth(w http.ResponseWriter, r *http.Request) {
 	}
 	lang := requestLanguage(r)
 	data := OpsPageData{
-		Lang:        lang,
-		Active:      "health",
-		CurrentPath: "/admin/health",
-		TitleKey:    "infrastructure_health",
-		SubtitleKey: "health_subtitle",
-		Domain:      a.cfg.Domain,
+		Lang:                 lang,
+		Active:               "health",
+		CurrentPath:          "/admin/health",
+		TitleKey:             "infrastructure_health",
+		SubtitleKey:          "health_subtitle",
+		Domain:               a.cfg.Domain,
 		RegisteredMetric:     "—",
 		OnlineSessionsMetric: "—",
 		OnlineRoomsMetric:    "—",
@@ -179,23 +183,25 @@ func (a *App) adminHealth(w http.ResponseWriter, r *http.Request) {
 		Name:     tr(lang, "xmpp_admin_service"),
 		State:    "ok",
 		StateKey: "healthy",
-		Detail:   tr(lang, "xmpp_admin_running"),
+		Summary:  tr(lang, "xmpp_admin_running"),
 	})
 
 	snapshot, configErr := loadEjabberdConfigForHost(a.cfg.EjabberdConfigPath, a.cfg.Domain)
 	if configErr != nil {
 		data.Health = append(data.Health, HealthCheck{
-			Name:     tr(lang, "configuration"),
-			State:    "error",
-			StateKey: "unavailable",
-			Detail:   configErr.Error(),
+			Name:      tr(lang, "configuration"),
+			State:     "error",
+			StateKey:  "unavailable",
+			Summary:   tr(lang, "health_config_unavailable"),
+			Technical: configErr.Error(),
 		})
 	} else {
 		data.Health = append(data.Health, HealthCheck{
-			Name:     tr(lang, "configuration"),
-			State:    "ok",
-			StateKey: "healthy",
-			Detail:   snapshot.Path,
+			Name:      tr(lang, "configuration"),
+			State:     "ok",
+			StateKey:  "healthy",
+			Summary:   tr(lang, "read_from_config"),
+			Technical: snapshot.Path,
 		})
 		inviteState := "warn"
 		inviteKey := "disabled"
@@ -204,39 +210,44 @@ func (a *App) adminHealth(w http.ResponseWriter, r *http.Request) {
 			inviteKey = "enabled"
 		}
 		data.Health = append(data.Health, HealthCheck{
-			Name:     "mod_invites",
+			Name:     tr(lang, "invitations"),
 			State:    inviteState,
 			StateKey: inviteKey,
-			Detail:   tr(lang, "read_from_config"),
+			Summary:  tr(lang, "read_from_config"),
 		})
 	}
 
 	start := time.Now()
 	statusErr := a.ejabberd.Status(r.Context())
-	data.APILatency = time.Since(start).Round(time.Millisecond).String()
+	statusLatency := time.Since(start).Round(time.Millisecond).String()
 	if statusErr != nil {
+		summary, technical := apiProblem(lang, "api", statusErr)
 		data.Health = append(data.Health, HealthCheck{
-			Name:     tr(lang, "ejabberd_api"),
-			State:    "error",
-			StateKey: "unavailable",
-			Detail:   statusErr.Error(),
+			Name:      tr(lang, "ejabberd_api"),
+			State:     "error",
+			StateKey:  "unavailable",
+			Summary:   summary,
+			Technical: technical,
 		})
 	} else {
+		data.APILatency = statusLatency
 		data.Health = append(data.Health, HealthCheck{
 			Name:     tr(lang, "ejabberd_api"),
 			State:    "ok",
 			StateKey: "healthy",
-			Detail:   tr(lang, "status_command_ok"),
+			Summary:  tr(lang, "status_command_ok"),
 		})
 	}
 
 	users, usersErr := a.ejabberd.RegisteredUsers(r.Context(), a.cfg.Domain)
 	if usersErr != nil {
+		summary, technical := apiProblem(lang, "users", usersErr)
 		data.Health = append(data.Health, HealthCheck{
-			Name:     tr(lang, "users"),
-			State:    "error",
-			StateKey: "unavailable",
-			Detail:   usersErr.Error(),
+			Name:      tr(lang, "users"),
+			State:     "error",
+			StateKey:  "unavailable",
+			Summary:   summary,
+			Technical: technical,
 		})
 	} else {
 		data.RegisteredMetric = strconv.Itoa(len(users))
@@ -244,35 +255,39 @@ func (a *App) adminHealth(w http.ResponseWriter, r *http.Request) {
 			Name:     tr(lang, "users"),
 			State:    "ok",
 			StateKey: "healthy",
-			Detail:   tr(lang, "read_access_ok"),
+			Summary:  tr(lang, "read_access_ok"),
 		})
 	}
 
 	sessions, sessionsErr := a.ejabberd.ConnectedUsers(r.Context())
 	if sessionsErr != nil {
+		summary, technical := apiProblem(lang, "sessions", sessionsErr)
 		data.Health = append(data.Health, HealthCheck{
-			Name:     tr(lang, "sessions"),
-			State:    "error",
-			StateKey: "unavailable",
-			Detail:   sessionsErr.Error(),
+			Name:      tr(lang, "connections_title"),
+			State:     "error",
+			StateKey:  "unavailable",
+			Summary:   summary,
+			Technical: technical,
 		})
 	} else {
 		data.OnlineSessionsMetric = strconv.Itoa(len(sessionsForHost(sessions, a.cfg.Domain)))
 		data.Health = append(data.Health, HealthCheck{
-			Name:     tr(lang, "sessions"),
+			Name:     tr(lang, "connections_title"),
 			State:    "ok",
 			StateKey: "healthy",
-			Detail:   tr(lang, "read_access_ok"),
+			Summary:  tr(lang, "read_access_ok"),
 		})
 	}
 
 	rooms, roomsErr := a.ejabberd.MUCOnlineRooms(r.Context(), "global")
 	if roomsErr != nil {
+		summary, technical := apiProblem(lang, "rooms", roomsErr)
 		data.Health = append(data.Health, HealthCheck{
-			Name:     tr(lang, "rooms"),
-			State:    "warn",
-			StateKey: "unavailable",
-			Detail:   tr(lang, "rooms_command_optional"),
+			Name:      tr(lang, "rooms"),
+			State:     "warn",
+			StateKey:  "unavailable",
+			Summary:   summary,
+			Technical: technical,
 		})
 	} else {
 		data.OnlineRoomsMetric = strconv.Itoa(len(rooms))
@@ -280,11 +295,63 @@ func (a *App) adminHealth(w http.ResponseWriter, r *http.Request) {
 			Name:     tr(lang, "rooms"),
 			State:    "ok",
 			StateKey: "healthy",
-			Detail:   tr(lang, "read_access_ok"),
+			Summary:  tr(lang, "read_access_ok"),
 		})
 	}
 
+	sort.SliceStable(data.Health, func(i, j int) bool {
+		return healthStateRank(data.Health[i].State) < healthStateRank(data.Health[j].State)
+	})
 	a.renderOps(w, data)
+}
+
+func healthStateRank(state string) int {
+	switch state {
+	case "error":
+		return 0
+	case "warn":
+		return 1
+	default:
+		return 2
+	}
+}
+
+func apiProblem(lang, area string, err error) (string, string) {
+	technical := ""
+	if err != nil {
+		technical = err.Error()
+	}
+	forbidden := strings.Contains(technical, "HTTP 403")
+	key := ""
+	switch area {
+	case "api":
+		if forbidden {
+			key = "health_api_forbidden"
+		} else {
+			key = "health_api_unavailable"
+		}
+	case "users":
+		if forbidden {
+			key = "health_users_forbidden"
+		} else {
+			key = "health_users_unavailable"
+		}
+	case "sessions":
+		if forbidden {
+			key = "health_sessions_forbidden"
+		} else {
+			key = "health_sessions_unavailable"
+		}
+	case "rooms":
+		if forbidden {
+			key = "health_rooms_forbidden"
+		} else {
+			key = "health_rooms_unavailable"
+		}
+	default:
+		key = "data_unavailable"
+	}
+	return tr(lang, key), technical
 }
 
 func (a *App) requireAdminGET(w http.ResponseWriter, r *http.Request, path string) bool {

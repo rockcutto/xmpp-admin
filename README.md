@@ -1,9 +1,3 @@
-> **Development status**
->
-> XMPP Admin is currently under active development and is **not yet recommended for production-critical deployments**.
-> The project has been tested in real ejabberd installations, but the configuration model, UI, security boundaries, and deployment process may still change before the first stable release.
->
-
 # XMPP Admin
 
 A small, neutral, self-hosted administration panel for **ejabberd**.
