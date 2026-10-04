@@ -1,0 +1,36 @@
+[Unit]
+Description=XMPP Admin
+After=network-online.target ejabberd.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=xmpp-admin
+Group=xmpp-admin
+EnvironmentFile=/etc/xmpp-admin/xmpp-admin.env
+ExecStart=/usr/local/bin/xmpp-admin
+Restart=on-failure
+RestartSec=3
+TimeoutStopSec=10
+UMask=0077
+
+NoNewPrivileges=true
+PrivateTmp=true
+PrivateDevices=true
+ProtectHome=true
+ProtectSystem=strict
+ProtectControlGroups=true
+ProtectKernelModules=true
+ProtectKernelTunables=true
+ProtectKernelLogs=true
+RestrictSUIDSGID=true
+LockPersonality=true
+MemoryDenyWriteExecute=true
+CapabilityBoundingSet=
+AmbientCapabilities=
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+SystemCallArchitectures=native
+ReadOnlyPaths=-/etc/ejabberd -/opt/ejabberd/conf
+
+[Install]
+WantedBy=multi-user.target

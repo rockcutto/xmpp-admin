@@ -1,0 +1,6 @@
+.env
+xmpp-admin
+coverage.out
+*.log
+*.tmp
+dist/
