@@ -48,7 +48,7 @@ ejabberd mod_http_api (loopback/private)
 
 XMPP Admin should not be exposed directly on a public TCP port. The ejabberd HTTP API should remain loopback-only or use HTTPS on a trusted private network.
 
-The panel intentionally uses a narrow ejabberd command allowlist. Do not grant `"*"`.
+The panel intentionally uses a narrow ejabberd command allowlist. Invitation creation/revocation are the only ejabberd write operations currently required. Users, sessions, rooms and infrastructure-health pages use read-only commands. Do not grant `"*"`.
 
 `/healthz` is a non-sensitive liveness check. `/readyz` performs a live ejabberd API request and is intended for local diagnostics; the supplied nginx configuration does not publish it.
 
@@ -60,4 +60,4 @@ The installer targets Ubuntu/Debian with systemd. Container deployment is suppor
 
 XMPP Admin does not store user passwords or maintain its own invite database.
 
-Administrative credentials are read from the service environment. Native invite tokens are read from ejabberd only for authenticated administrative operations and pages are returned with `Cache-Control: no-store`.
+Administrative credentials are read from the service environment. Native invite tokens and operational account/session/room data are read from ejabberd only for authenticated administrative pages, and those pages are returned with `Cache-Control: no-store`.

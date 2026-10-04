@@ -13,6 +13,34 @@ const adminTemplate = `
 </head>
 <body>
 <div class="page">
+<aside class="nav-rail d-print-none" aria-label="{{tr .Lang "admin_sections"}}">
+  <a class="nav-rail-brand" href="{{p "/admin"}}" aria-label="XMPP Admin" title="XMPP Admin">
+    <span aria-hidden="true">XA</span>
+  </a>
+  <nav class="nav-rail-items">
+    <a class="nav-rail-link active" href="{{p "/admin"}}" aria-label="{{tr .Lang "invitations"}}" title="{{tr .Lang "invitations"}}">
+      <span class="nav-rail-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 5h16v14H4z"/><path d="m4 7 8 6 8-6"/></svg></span>
+      <span class="nav-rail-label">{{tr .Lang "nav_invites"}}</span>
+    </a>
+    <a class="nav-rail-link" href="{{p "/admin/users"}}" aria-label="{{tr .Lang "users"}}" title="{{tr .Lang "users"}}">
+      <span class="nav-rail-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M16 20v-2a4 4 0 0 0-4-4H7a4 4 0 0 0-4 4v2"/><circle cx="9.5" cy="7" r="4"/><path d="M17 11a4 4 0 0 1 4 4v5"/><path d="M16 3.3a4 4 0 0 1 0 7.4"/></svg></span>
+      <span class="nav-rail-label">{{tr .Lang "nav_users"}}</span>
+    </a>
+    <a class="nav-rail-link" href="{{p "/admin/sessions"}}" aria-label="{{tr .Lang "sessions"}}" title="{{tr .Lang "sessions"}}">
+      <span class="nav-rail-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><path d="M12 8v5l3 2"/></svg></span>
+      <span class="nav-rail-label">{{tr .Lang "nav_sessions"}}</span>
+    </a>
+    <a class="nav-rail-link" href="{{p "/admin/rooms"}}" aria-label="{{tr .Lang "rooms"}}" title="{{tr .Lang "rooms"}}">
+      <span class="nav-rail-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 5h12a3 3 0 0 1 3 3v5a3 3 0 0 1-3 3H9l-5 4z"/><path d="M8 9h7M8 12h5"/></svg></span>
+      <span class="nav-rail-label">{{tr .Lang "nav_rooms"}}</span>
+    </a>
+    <a class="nav-rail-link" href="{{p "/admin/health"}}" aria-label="{{tr .Lang "health"}}" title="{{tr .Lang "health"}}">
+      <span class="nav-rail-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M3 12h4l2-5 4 10 2-5h6"/><path d="M5 4h14a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z"/></svg></span>
+      <span class="nav-rail-label">{{tr .Lang "nav_health"}}</span>
+    </a>
+  </nav>
+</aside>
+<div class="app-main">
 <header class="navbar navbar-expand-md d-print-none">
   <div class="container-xl">
     <a class="navbar-brand navbar-brand-autodark" href="{{p "/admin"}}">XMPP Admin</a>
@@ -21,18 +49,20 @@ const adminTemplate = `
         <span class="m3-theme-icon" aria-hidden="true"></span>
       </button>
       <div class="btn-group btn-group-sm" role="group" aria-label="Language">
-        <a class="btn {{if eq .Lang "en"}}btn-primary{{else}}btn-outline-secondary{{end}}" href="{{p "/lang"}}?lang=en&next=/admin">EN</a>
-        <a class="btn {{if eq .Lang "ru"}}btn-primary{{else}}btn-outline-secondary{{end}}" href="{{p "/lang"}}?lang=ru&next=/admin">RU</a>
+        <a class="btn {{if eq .Lang "en"}}btn-primary{{else}}btn-outline-secondary{{end}}" href="{{p "/lang"}}?lang=en&next={{.CurrentPath}}">EN</a>
+        <a class="btn {{if eq .Lang "ru"}}btn-primary{{else}}btn-outline-secondary{{end}}" href="{{p "/lang"}}?lang=ru&next={{.CurrentPath}}">RU</a>
       </div>
     </div>
   </div>
 </header>
 
+
+
 <div class="page-wrapper">
 <div class="page-header d-print-none">
   <div class="container-xl">
     <h2 class="page-title">{{tr .Lang "invitations"}}</h2>
-    <div class="text-secondary">{{printf (tr .Lang "invitations_subtitle") .Domain}}</div>
+    <div class="text-secondary page-subtitle">{{printf (tr .Lang "invitations_subtitle") .Domain}}</div>
   </div>
 </div>
 
@@ -53,7 +83,7 @@ const adminTemplate = `
 </div>
 {{end}}
 
-<div class="alert alert-info">
+<div class="context-note">
   {{tr .Lang "native_invites_note"}}
 </div>
 
@@ -141,9 +171,10 @@ const adminTemplate = `
   </div>
 
   <div class="col-lg-8">
+    {{if not .APIError}}
     <div class="card">
       <div class="table-responsive">
-        <table class="table table-vcenter card-table invites-table">
+        <table class="table table-vcenter card-table invites-table responsive-data-table">
           <thead>
             <tr>
               <th>{{tr .Lang "created"}}</th>
@@ -158,19 +189,19 @@ const adminTemplate = `
           <tbody>
           {{range .Invites}}
             <tr>
-              <td class="text-nowrap invite-date"><time datetime="{{.CreatedAt}}" title="{{.CreatedAt}}">{{formatTimestamp .CreatedAt}}</time></td>
-              <td class="invite-jid">{{if .Inviter}}{{.Inviter}}{{else}}{{tr $.Lang "server_generated"}}{{end}}</td>
-              <td>{{if .AccountName}}<code>{{.AccountName}}@{{$.Domain}}</code>{{else}}—{{end}}</td>
-              <td class="text-nowrap invite-date"><time datetime="{{.Expires}}" title="{{.Expires}}">{{formatTimestamp .Expires}}</time></td>
-              <td><span class="badge bg-secondary-lt invite-type">{{inviteTypeLabel $.Lang .Type}}</span></td>
-              <td>
+              <td data-label="{{tr $.Lang "created"}}" class="text-nowrap invite-date"><time datetime="{{.CreatedAt}}" title="{{.CreatedAt}}">{{formatTimestamp .CreatedAt}}</time></td>
+              <td data-label="{{tr $.Lang "inviter"}}" class="invite-jid ops-break">{{if .Inviter}}{{.Inviter}}{{else}}{{tr $.Lang "server_generated"}}{{end}}</td>
+              <td data-label="{{tr $.Lang "account_name"}}">{{if .AccountName}}<code class="ops-break">{{.AccountName}}@{{$.Domain}}</code>{{else}}—{{end}}</td>
+              <td data-label="{{tr $.Lang "expires"}}" class="text-nowrap invite-date"><time datetime="{{.Expires}}" title="{{.Expires}}">{{formatTimestamp .Expires}}</time></td>
+              <td data-label="{{tr $.Lang "type"}}"><span class="badge bg-secondary-lt invite-type">{{inviteTypeLabel $.Lang .Type}}</span></td>
+              <td data-label="{{tr $.Lang "status"}}">
                 {{if .Valid}}
                   <span class="badge bg-green-lt">{{tr $.Lang "active"}}</span>
                 {{else}}
                   <span class="badge bg-secondary-lt">{{tr $.Lang "expired"}}</span>
                 {{end}}
               </td>
-              <td class="text-end text-nowrap">
+              <td class="text-end text-nowrap table-actions-cell">
                 <div class="invite-actions">
                   {{with safeURL .LandingPage}}<a class="btn btn-sm btn-outline-secondary" href="{{.}}" target="_blank" rel="noreferrer noopener">{{tr $.Lang "open"}}</a>{{else}}{{with safeURL .TokenURI}}<a class="btn btn-sm btn-outline-secondary" href="{{.}}">{{tr $.Lang "open"}}</a>{{end}}{{end}}
                   {{if .Valid}}
@@ -184,15 +215,17 @@ const adminTemplate = `
               </td>
             </tr>
           {{else}}
-            <tr><td colspan="7" class="text-secondary text-center py-5">{{tr $.Lang "no_invites"}}</td></tr>
+            <tr class="empty-row"><td colspan="7" class="text-secondary text-center py-5">{{tr $.Lang "no_invites"}}</td></tr>
           {{end}}
           </tbody>
         </table>
       </div>
     </div>
+    {{end}}
   </div>
 </div>
 
+</div>
 </div>
 </div>
 </div>

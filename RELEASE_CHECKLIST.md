@@ -23,7 +23,7 @@ Use this before publishing a tag or deployment package.
 - [ ] `/healthz` does not expose sensitive server details.
 - [ ] `/readyz` is not exposed by the public reverse-proxy configuration.
 - [ ] Plain HTTP ejabberd API is loopback-only.
-- [ ] Dedicated API account can call the four invite commands but an unrelated command such as `status` returns HTTP 403.
+- [ ] Dedicated API account can call the documented allowlist only; an unrelated destructive command such as `stop` returns HTTP 403.
 - [ ] TLS API endpoint uses a hostname valid for the configured certificate (or `EJABBERD_API` is explicitly set).
 
 ## ejabberd compatibility
@@ -34,6 +34,11 @@ Use this before publishing a tag or deployment package.
 - [ ] `generate_invite` works.
 - [ ] `generate_invite_with_username` works.
 - [ ] `expire_invite_by_token` revokes exactly one invite.
+- [ ] `registered_users` loads accounts for the selected vhost.
+- [ ] `connected_users` loads sessions and UI filtering excludes other vhosts.
+- [ ] `status` succeeds for the Health page.
+- [ ] `muc_online_rooms` loads online rooms when MUC administration commands are available.
+- [ ] Rooms degrade cleanly when `muc_online_rooms` is unavailable.
 - [ ] `include_config_file` deployment was tested if the production config uses it.
 - [ ] multi-vhost deployment was tested if `XMPP_DOMAIN` is used.
 
@@ -48,6 +53,8 @@ Use this before publishing a tag or deployment package.
 - [ ] Local `/xmpp-admin/readyz` returns HTTP 200 after API credentials are configured.
 - [ ] Public `/xmpp-admin/readyz` is blocked by nginx.
 - [ ] Existing native user-created invites are visible through the deployed panel.
+- [ ] Users, Sessions, Rooms and Health pages render and navigate correctly.
+- [ ] Health page does not expose API credentials, passwords or invite tokens.
 - [ ] EN and RU both render.
 - [ ] light/dark/system theme switching works.
 

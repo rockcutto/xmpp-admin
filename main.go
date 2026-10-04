@@ -48,7 +48,7 @@ func main() {
 		"safeURL":         safeExternalURL,
 		"formatTimestamp": formatTimestamp,
 		"inviteTypeLabel": inviteTypeLabel,
-	}).Parse(adminTemplate)
+	}).Parse(adminTemplate + opsTemplate)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -83,6 +83,10 @@ func main() {
 	mux.HandleFunc("/readyz", app.ready)
 	mux.HandleFunc("/lang", app.setLanguage)
 	mux.HandleFunc("/admin", app.adminHome)
+	mux.HandleFunc("/admin/users", app.adminUsers)
+	mux.HandleFunc("/admin/sessions", app.adminSessions)
+	mux.HandleFunc("/admin/rooms", app.adminRooms)
+	mux.HandleFunc("/admin/health", app.adminHealth)
 	mux.HandleFunc("/admin/invites/create", app.adminCreateInvite)
 	mux.HandleFunc("/admin/invites/revoke", app.adminRevokeInvite)
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
@@ -213,7 +217,11 @@ func (a *App) requireAdmin(w http.ResponseWriter, r *http.Request) bool {
 }
 
 func sameOrigin(r *http.Request) bool {
-	if site := strings.ToLower(strings.TrimSpace(r.Header.Get("Sec-Fetch-Site"))); site != "" && site != "same-origin" && site != "none" {
+	// Fetch Metadata is advisory here. Some privacy-focused browsers report
+	// "same-site" or omit the header for a legitimate same-origin POST.
+	// Explicit cross-site remains a hard failure; the CSRF token is the
+	// authoritative protection for ambiguous/missing metadata.
+	if site := strings.ToLower(strings.TrimSpace(r.Header.Get("Sec-Fetch-Site"))); site == "cross-site" {
 		return false
 	}
 	expectedScheme := strings.ToLower(strings.TrimSpace(r.Header.Get("X-Forwarded-Proto")))
@@ -224,23 +232,30 @@ func sameOrigin(r *http.Request) bool {
 			expectedScheme = "http"
 		}
 	}
-	checkURL := func(raw string) bool {
+	checkURL := func(raw string) (bool, bool) {
+		raw = strings.TrimSpace(raw)
+		if raw == "" || strings.EqualFold(raw, "null") {
+			return false, false
+		}
 		u, err := url.Parse(raw)
 		if err != nil || u.Host == "" {
-			return false
+			return false, false
 		}
-		return strings.EqualFold(u.Host, r.Host) && strings.EqualFold(u.Scheme, expectedScheme)
+		return strings.EqualFold(u.Host, r.Host) && strings.EqualFold(u.Scheme, expectedScheme), true
 	}
-	if origin := strings.TrimSpace(r.Header.Get("Origin")); origin != "" {
-		return checkURL(origin)
+	if origin := r.Header.Get("Origin"); origin != "" {
+		if ok, usable := checkURL(origin); usable {
+			return ok
+		}
 	}
-	if referer := strings.TrimSpace(r.Header.Get("Referer")); referer != "" {
-		return checkURL(referer)
+	if referer := r.Header.Get("Referer"); referer != "" {
+		if ok, usable := checkURL(referer); usable {
+			return ok
+		}
 	}
-	// Some privacy-focused browsers omit Origin/Referer and Fetch Metadata
-	// even for a same-origin form POST. Missing metadata is not treated as
-	// proof of cross-site origin; POST requests are still protected by the
-	// per-process CSRF token checked in requireAdmin.
+	// Missing, stripped, or privacy-redacted metadata is not proof of a
+	// cross-site request. requireAdmin still requires the per-process CSRF
+	// token before any write action can proceed.
 	return true
 }
 
@@ -296,14 +311,15 @@ func (a *App) setLanguage(w http.ResponseWriter, r *http.Request) {
 }
 
 type AdminPageData struct {
-	Invites    []NativeInvite
-	Domain     string
-	Created    bool
-	Lang       string
-	APIError   string
-	Server     EjabberdConfigSnapshot
-	ConfigPath string
-	CSRFToken  string
+	Invites     []NativeInvite
+	Domain      string
+	Created     bool
+	Lang        string
+	APIError    string
+	Server      EjabberdConfigSnapshot
+	ConfigPath  string
+	CSRFToken   string
+	CurrentPath string
 }
 
 func (a *App) adminHome(w http.ResponseWriter, r *http.Request) {
@@ -325,8 +341,9 @@ func (a *App) renderAdminPage(w http.ResponseWriter, r *http.Request) {
 		Created:    r.URL.Query().Get("created") == "1",
 		Lang:       lang,
 		Server:     serverCfg,
-		ConfigPath: a.cfg.EjabberdConfigPath,
-		CSRFToken:  a.csrfToken,
+		ConfigPath:  a.cfg.EjabberdConfigPath,
+		CSRFToken:   a.csrfToken,
+		CurrentPath: "/admin",
 	}
 	if !serverCfg.InvitesEnabled {
 		data.APIError = tr(lang, "mod_invites_disabled")

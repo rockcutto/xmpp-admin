@@ -197,3 +197,36 @@ func (c *EjabberdClient) ExpireInvite(ctx context.Context, host, token string) e
 	}
 	return fmt.Errorf("unexpected ejabberd response to expire_invite_by_token")
 }
+
+
+func (c *EjabberdClient) RegisteredUsers(ctx context.Context, host string) ([]string, error) {
+	var users []string
+	if err := c.call(ctx, "registered_users", map[string]string{"host": host}, &users); err != nil {
+		return nil, err
+	}
+	return users, nil
+}
+
+func (c *EjabberdClient) ConnectedUsers(ctx context.Context) ([]string, error) {
+	var sessions []string
+	if err := c.call(ctx, "connected_users", map[string]string{}, &sessions); err != nil {
+		return nil, err
+	}
+	return sessions, nil
+}
+
+func (c *EjabberdClient) MUCOnlineRooms(ctx context.Context, service string) ([]string, error) {
+	if strings.TrimSpace(service) == "" {
+		service = "global"
+	}
+	var rooms []string
+	if err := c.call(ctx, "muc_online_rooms", map[string]string{"service": service}, &rooms); err != nil {
+		return nil, err
+	}
+	return rooms, nil
+}
+
+func (c *EjabberdClient) Status(ctx context.Context) error {
+	var raw json.RawMessage
+	return c.call(ctx, "status", map[string]string{}, &raw)
+}

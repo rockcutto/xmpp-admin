@@ -22,6 +22,16 @@ The project follows semantic versioning once public releases are tagged.
 - Tests for native API wire decoding, config include semantics, CSRF metadata and token-free invite creation redirects.
 - Compact invite-table presentation with readable timestamps and human-friendly invite type labels.
 - Production deployment guidance based on a live nginx + ejabberd integration.
+- Read-only registered users view for the selected XMPP vhost.
+- Read-only active sessions view with vhost filtering.
+- Read-only online MUC rooms view with graceful unavailable state.
+- Infrastructure health dashboard with configuration/API checks and operational counts.
+- Shared navigation across Invitations, Users, Sessions, Rooms and Health.
+- Responsive phone/tablet/desktop layouts with stacked mobile data rows and tablet-friendly invitation cards.
+- Clear connected/not-connected session wording instead of presence-like online/offline labels.
+- Compact operational tables that avoid repeating username/JID/room data.
+- Mobile tab auto-centering and frontend asset revalidation so UI updates appear reliably.
+- Material 3 app shell with a compact desktop navigation rail and a labeled mobile bottom navigation bar.
 
 ### Security
 
@@ -38,3 +48,4 @@ The project follows semantic versioning once public releases are tagged.
 - Host-scoped invite API access is documented with the required `configure` gate and separate allow entries.
 - TLS API autodetection uses the configured XMPP vhost as the certificate hostname instead of a loopback IP.
 - nginx examples explicitly forward the Authorization header used by the web-panel Basic Auth boundary.
+- Operational dashboards use only explicit read-only ejabberd commands; no account/session/room mutation commands were added.

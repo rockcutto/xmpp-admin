@@ -1,6 +1,7 @@
 package main
 
 import (
+	"html/template"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -81,9 +82,23 @@ func TestSameOriginAcceptsProxyHTTPS(t *testing.T) {
 }
 
 
+func TestTemplatesParse(t *testing.T) {
+	_, err := template.New("root").Funcs(template.FuncMap{
+		"tr":              tr,
+		"join":            strings.Join,
+		"p":               func(path string) string { return path },
+		"safeURL":         safeExternalURL,
+		"formatTimestamp": formatTimestamp,
+		"inviteTypeLabel": inviteTypeLabel,
+	}).Parse(adminTemplate + opsTemplate)
+	if err != nil {
+		t.Fatal(err)
+	}
+}
+
 func TestTemplateTranslationKeysExist(t *testing.T) {
 	re := regexp.MustCompile(`tr\s+(?:\$?\.Lang)\s+"([^"]+)"`)
-	matches := re.FindAllStringSubmatch(adminTemplate, -1)
+	matches := re.FindAllStringSubmatch(adminTemplate+opsTemplate, -1)
 	for _, match := range matches {
 		key := match[1]
 		if _, ok := messages[langEN][key]; !ok {
@@ -200,6 +215,28 @@ func TestSameOriginAcceptsFetchMetadataFallback(t *testing.T) {
 		t.Fatal("same-origin Fetch Metadata should be accepted")
 	}
 }
+
+func TestSameOriginAcceptsPrivacyRedactedMetadata(t *testing.T) {
+	req := httptest.NewRequest("POST", "http://admin.example/x", nil)
+	req.Host = "admin.example"
+	req.Header.Set("X-Forwarded-Proto", "https")
+	req.Header.Set("Sec-Fetch-Site", "same-site")
+	req.Header.Set("Origin", "null")
+	if !sameOrigin(req) {
+		t.Fatal("privacy-redacted metadata must fall back to CSRF validation")
+	}
+}
+
+func TestSameOriginRejectsExplicitForeignOrigin(t *testing.T) {
+	req := httptest.NewRequest("POST", "http://admin.example/x", nil)
+	req.Host = "admin.example"
+	req.Header.Set("X-Forwarded-Proto", "https")
+	req.Header.Set("Origin", "https://evil.example")
+	if sameOrigin(req) {
+		t.Fatal("explicit foreign origin must be rejected")
+	}
+}
+
 
 
 func TestCreateInviteRedirectDoesNotLeakToken(t *testing.T) {

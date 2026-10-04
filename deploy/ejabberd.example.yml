@@ -26,7 +26,7 @@ access_rules:
     - allow: xmpp_admin_api
 
 api_permissions:
-  "XMPP Admin invite API":
+  "XMPP Admin API":
     from:
       - mod_http_api
     who:
@@ -36,8 +36,15 @@ api_permissions:
       - generate_invite
       - generate_invite_with_username
       - expire_invite_by_token
+      - registered_users
+      - connected_users
+      - status
+      - muc_online_rooms
 
 # Keep the existing mod_invites/mod_register policy unchanged.
+# muc_online_rooms is read-only and used by the Rooms page. It requires the
+# corresponding MUC administration command to be available; the rest of the
+# panel continues to work if that command is unavailable.
 # XMPP Admin reads it from ejabberd.yml.
 #
 # Never replace the command allowlist with "*".

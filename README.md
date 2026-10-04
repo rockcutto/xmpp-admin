@@ -8,11 +8,14 @@
 
 A small, neutral, self-hosted administration panel for **ejabberd**.
 
-The current release focuses on native account invitations provided by `mod_invites`. XMPP Admin does not create a second invitation database: ejabberd remains the authority for invite tokens, validity, limits, reserved usernames, registration and inviter/invitee state.
+The current pre-release provides native invitation management plus read-only operational views for registered users, active sessions, online MUC rooms and infrastructure health. XMPP Admin does not create a second invitation database: ejabberd remains the authority for invite tokens, validity, limits, reserved usernames, registration and inviter/invitee state.
 
 The UI is product-neutral, has English and Russian locales, and uses a self-contained Material 3-inspired light/dark interface.
 
-> Project status: pre-release. The invitation workflow is implemented; users, sessions, rooms and infrastructure health are planned next.
+> [!WARNING]
+> **Pre-release software**
+>
+> XMPP Admin is under active development and is not yet intended for production-critical environments. APIs, configuration, security assumptions and deployment instructions may still change before the first stable release. Review the configuration carefully and use a dedicated least-privileged ejabberd API account.
 
 ## What it does
 
@@ -20,6 +23,10 @@ The UI is product-neutral, has English and Russian locales, and uses a self-cont
 - Creates native account invitations with an optional preselected username.
 - Revokes a single invite by expiring its token.
 - Shows invites created by normal registered users in XMPP clients as well as invites created from the panel.
+- Lists registered accounts for the selected XMPP vhost.
+- Lists active sessions for the selected XMPP vhost.
+- Lists server-wide online MUC rooms reported by ejabberd.
+- Shows operational health checks and counts without adding write privileges.
 - Reads the existing ejabberd configuration instead of duplicating server policy.
 - Understands `hosts`, `host_config`, `append_host_config` and `include_config_file` with `allow_only` / `disallow`.
 - Displays the effective `mod_invites` and `mod_register` settings for the selected vhost.
@@ -46,14 +53,20 @@ ejabberd mod_http_api on loopback/private network
 
 The web service and ejabberd API should not be exposed directly to the public Internet.
 
-XMPP Admin needs only these ejabberd API commands:
+XMPP Admin needs only this narrow ejabberd API command set:
 
 ```text
 list_invites
 generate_invite
 generate_invite_with_username
 expire_invite_by_token
+registered_users
+connected_users
+status
+muc_online_rooms
 ```
+
+The first seven commands cover the core panel. `muc_online_rooms` is used by the Rooms page and requires the corresponding MUC administration command to be available; if it is not available, the rest of the panel continues to work and the Rooms/Health pages report it as unavailable.
 
 Do **not** grant `"*"`.
 
@@ -65,7 +78,7 @@ Recommended:
 
 - Ubuntu/Debian-family host with systemd, or an equivalent manual deployment;
 - an existing ejabberd installation with `mod_invites`;
-- an ejabberd release that exposes the native invite commands listed below;
+- an ejabberd release that exposes the required commands listed below;
 - nginx or another HTTPS reverse proxy;
 - Go 1.22+ when building from source.
 
@@ -76,7 +89,13 @@ ejabberdctl help list_invites
 ejabberdctl help generate_invite
 ejabberdctl help generate_invite_with_username
 ejabberdctl help expire_invite_by_token
+ejabberdctl help registered_users
+ejabberdctl help connected_users
+ejabberdctl help status
+ejabberdctl help muc_online_rooms
 ```
+
+The `muc_online_rooms` check is optional when you do not use the Rooms page.
 
 If `ejabberdctl` is not in `PATH`, use the control executable shipped with your ejabberd installation. Do not copy a version-specific binary path from another server.
 
@@ -163,7 +182,7 @@ unset API_PASS
 
 If the account already exists, use your installation's `change_password` command instead.
 
-### Grant only the four invite commands
+### Grant only the required commands
 
 Merge the following into the existing ejabberd configuration. Do not replace unrelated ACLs, access rules, listeners, or API permissions.
 
@@ -179,7 +198,7 @@ access_rules:
     - allow: xmpp_admin_api
 
 api_permissions:
-  "XMPP Admin invite API":
+  "XMPP Admin API":
     from:
       - mod_http_api
     who:
@@ -189,6 +208,10 @@ api_permissions:
       - generate_invite
       - generate_invite_with_username
       - expire_invite_by_token
+      - registered_users
+      - connected_users
+      - status
+      - muc_online_rooms
 ```
 
 The `configure` access rule is required because these API commands carry a `host` argument and ejabberd applies a host-level authorization gate before command execution.
@@ -267,7 +290,7 @@ curl -i http://127.0.0.1:8090/xmpp-admin/readyz
 
 Expected: HTTP 200 with `{"ok":true}`.
 
-Also verify that the dedicated API account cannot call unrelated commands. The following test reads the API credentials from the protected environment file and prints only the HTTP status:
+Also verify that the dedicated API account cannot call unrelated **write/destructive** commands. The following test reads the API credentials from the protected environment file and prints only the HTTP status:
 
 ```bash
 sudo bash -c '
@@ -283,11 +306,11 @@ curl -sS -o /dev/null -w "HTTP %{http_code}\n" \
   --basic --user "$USER:$PASS" \
   -H "Content-Type: application/json" \
   -d "{}" \
-  "$API/status"
+  "$API/stop"
 '
 ```
 
-Expected: **HTTP 403**. If an unrelated administrative command returns 200, stop and tighten the existing `api_permissions` before exposing XMPP Admin.
+Expected: **HTTP 403**. If `stop` or another command outside the documented allowlist returns 200, stop and tighten the existing `api_permissions` before exposing XMPP Admin.
 
 ## 2. Configure nginx
 
@@ -363,11 +386,17 @@ After the page opens successfully:
 3. create an invite with a preselected username;
 4. revoke exactly one invite and confirm the other remains;
 5. create an invite from a normal XMPP client and confirm it appears after refresh;
-6. re-check that `/xmpp-admin/readyz` is not publicly reachable through nginx.
+6. open Users and confirm registered accounts load;
+7. open Sessions and confirm active resources are limited to the selected vhost;
+8. open Rooms and confirm online rooms load, or that the page clearly reports `muc_online_rooms` as unavailable;
+9. open Health and confirm the API/configuration checks are healthy;
+10. re-check that `/xmpp-admin/readyz` is not publicly reachable through nginx.
 
 XMPP Admin reads and writes the native `mod_invites` state; it does not maintain a second invitation database.
 
 ## Updating
+
+A source update is not enough by itself. XMPP Admin runs the installed binary at `/usr/local/bin/xmpp-admin`, so after every `git pull` you must rerun the installer to rebuild the binary and restart the systemd service:
 
 ```bash
 cd xmpp-admin
@@ -376,6 +405,8 @@ sudo bash install.sh
 ```
 
 The installer preserves existing credentials from `/etc/xmpp-admin/xmpp-admin.env`.
+
+After an update that changes forms or CSRF handling, reload the admin page before submitting a form so the browser receives the token generated by the restarted process.
 
 ## Configuration
 
@@ -514,6 +545,7 @@ CI also runs:
 - ejabberd API credentials never reach browser JavaScript.
 - Administrative pages are sent with `Cache-Control: no-store`.
 - The frontend has no third-party CDN dependency.
+- Users, sessions, rooms and health views are read-only.
 - New write actions must preserve same-origin/CSRF protection.
 - Keep the ejabberd command whitelist narrow.
 
