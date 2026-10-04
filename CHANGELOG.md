@@ -34,6 +34,7 @@ The project follows semantic versioning once public releases are tagged.
 - Native invite tokens are kept out of redirect URLs and browser history.
 - Public nginx configuration does not expose the live readiness probe.
 - Runtime Basic Auth credential syntax is validated before serving requests.
+- Per-process CSRF tokens protect write forms even when privacy-focused browsers omit Origin, Referer, or Fetch Metadata headers.
 - Host-scoped invite API access is documented with the required `configure` gate and separate allow entries.
 - TLS API autodetection uses the configured XMPP vhost as the certificate hostname instead of a loopback IP.
 - nginx examples explicitly forward the Authorization header used by the web-panel Basic Auth boundary.

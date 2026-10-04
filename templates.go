@@ -63,6 +63,7 @@ const adminTemplate = `
       <div class="card-header"><h3 class="card-title">{{tr .Lang "new_invite"}}</h3></div>
       <div class="card-body">
         <form method="post" action="{{p "/admin/invites/create"}}">
+          <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
           <div class="mb-3">
             <label class="form-label">{{tr .Lang "username_optional"}}</label>
             <div class="input-group">
@@ -174,6 +175,7 @@ const adminTemplate = `
                   {{with safeURL .LandingPage}}<a class="btn btn-sm btn-outline-secondary" href="{{.}}" target="_blank" rel="noreferrer noopener">{{tr $.Lang "open"}}</a>{{else}}{{with safeURL .TokenURI}}<a class="btn btn-sm btn-outline-secondary" href="{{.}}">{{tr $.Lang "open"}}</a>{{end}}{{end}}
                   {{if .Valid}}
                   <form method="post" action="{{p "/admin/invites/revoke"}}">
+                    <input type="hidden" name="csrf_token" value="{{$.CSRFToken}}">
                     <input type="hidden" name="token" value="{{.Token}}">
                     <button class="btn btn-sm btn-outline-danger" type="submit">{{tr $.Lang "revoke"}}</button>
                   </form>

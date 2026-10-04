@@ -1,7 +1,9 @@
 package main
 
 import (
+	"crypto/rand"
 	"crypto/subtle"
+	"encoding/base64"
 	"encoding/json"
 	"html/template"
 	"log"
@@ -19,6 +21,7 @@ type App struct {
 	templates *template.Template
 	cfg       Config
 	ejabberd  *EjabberdClient
+	csrfToken string
 }
 
 type Config struct {
@@ -50,6 +53,11 @@ func main() {
 		log.Fatal(err)
 	}
 
+	csrfToken, err := newCSRFToken()
+	if err != nil {
+		log.Fatalf("generate CSRF token: %v", err)
+	}
+
 	httpClient := &http.Client{
 		Timeout: 8 * time.Second,
 		CheckRedirect: func(req *http.Request, via []*http.Request) error {
@@ -65,6 +73,7 @@ func main() {
 			password: cfg.EjabberdAPIPass,
 			client:   httpClient,
 		},
+		csrfToken: csrfToken,
 	}
 
 	mux := http.NewServeMux()
@@ -184,9 +193,21 @@ func (a *App) requireAdmin(w http.ResponseWriter, r *http.Request) bool {
 		http.Error(w, "Unauthorized", http.StatusUnauthorized)
 		return false
 	}
-	if r.Method == http.MethodPost && !sameOrigin(r) {
-		http.Error(w, "Bad origin", http.StatusForbidden)
-		return false
+	if r.Method == http.MethodPost {
+		if !sameOrigin(r) {
+			http.Error(w, "Bad origin", http.StatusForbidden)
+			return false
+		}
+		r.Body = http.MaxBytesReader(w, r.Body, 64<<10)
+		if err := r.ParseForm(); err != nil {
+			http.Error(w, "Bad form", http.StatusBadRequest)
+			return false
+		}
+		token := r.FormValue("csrf_token")
+		if token == "" || subtle.ConstantTimeCompare([]byte(token), []byte(a.csrfToken)) != 1 {
+			http.Error(w, "Forbidden", http.StatusForbidden)
+			return false
+		}
 	}
 	return true
 }
@@ -216,7 +237,19 @@ func sameOrigin(r *http.Request) bool {
 	if referer := strings.TrimSpace(r.Header.Get("Referer")); referer != "" {
 		return checkURL(referer)
 	}
-	return strings.EqualFold(strings.TrimSpace(r.Header.Get("Sec-Fetch-Site")), "same-origin")
+	// Some privacy-focused browsers omit Origin/Referer and Fetch Metadata
+	// even for a same-origin form POST. Missing metadata is not treated as
+	// proof of cross-site origin; POST requests are still protected by the
+	// per-process CSRF token checked in requireAdmin.
+	return true
+}
+
+func newCSRFToken() (string, error) {
+	raw := make([]byte, 32)
+	if _, err := rand.Read(raw); err != nil {
+		return "", err
+	}
+	return base64.RawURLEncoding.EncodeToString(raw), nil
 }
 
 func (a *App) currentServerConfig() EjabberdConfigSnapshot {
@@ -270,6 +303,7 @@ type AdminPageData struct {
 	APIError   string
 	Server     EjabberdConfigSnapshot
 	ConfigPath string
+	CSRFToken  string
 }
 
 func (a *App) adminHome(w http.ResponseWriter, r *http.Request) {
@@ -292,6 +326,7 @@ func (a *App) renderAdminPage(w http.ResponseWriter, r *http.Request) {
 		Lang:       lang,
 		Server:     serverCfg,
 		ConfigPath: a.cfg.EjabberdConfigPath,
+		CSRFToken:  a.csrfToken,
 	}
 	if !serverCfg.InvitesEnabled {
 		data.APIError = tr(lang, "mod_invites_disabled")

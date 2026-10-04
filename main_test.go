@@ -140,12 +140,54 @@ func TestUsernameValidationDefersInternationalNormalizationToEjabberd(t *testing
 }
 
 
-func TestSameOriginRejectsMissingBrowserMetadata(t *testing.T) {
+func TestSameOriginAllowsMissingBrowserMetadataForCSRFFallback(t *testing.T) {
 	req := httptest.NewRequest("POST", "http://admin.example/x", nil)
 	req.Host = "admin.example"
 	req.Header.Set("X-Forwarded-Proto", "https")
-	if sameOrigin(req) {
-		t.Fatal("POST without Origin, Referer, or same-origin Fetch Metadata must be rejected")
+	if !sameOrigin(req) {
+		t.Fatal("missing browser metadata must fall back to CSRF token validation")
+	}
+}
+
+func TestRequireAdminRejectsPOSTWithoutCSRFToken(t *testing.T) {
+	app := &App{
+		cfg: Config{
+			AdminUser:     "admin",
+			AdminPassword: "a-very-long-admin-password",
+		},
+		csrfToken: "test-csrf-token",
+	}
+	req := httptest.NewRequest(http.MethodPost, "https://admin.example/admin/invites/create", strings.NewReader(""))
+	req.Host = "admin.example"
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	req.SetBasicAuth("admin", "a-very-long-admin-password")
+
+	rec := httptest.NewRecorder()
+	if app.requireAdmin(rec, req) {
+		t.Fatal("POST without CSRF token must be rejected")
+	}
+	if rec.Code != http.StatusForbidden {
+		t.Fatalf("status = %d, want %d", rec.Code, http.StatusForbidden)
+	}
+}
+
+func TestRequireAdminAcceptsPOSTWithCSRFTokenWithoutBrowserMetadata(t *testing.T) {
+	app := &App{
+		cfg: Config{
+			AdminUser:     "admin",
+			AdminPassword: "a-very-long-admin-password",
+		},
+		csrfToken: "test-csrf-token",
+	}
+	form := url.Values{"csrf_token": {"test-csrf-token"}}
+	req := httptest.NewRequest(http.MethodPost, "https://admin.example/admin/invites/create", strings.NewReader(form.Encode()))
+	req.Host = "admin.example"
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	req.SetBasicAuth("admin", "a-very-long-admin-password")
+
+	rec := httptest.NewRecorder()
+	if !app.requireAdmin(rec, req) {
+		t.Fatalf("valid CSRF token should allow POST without browser metadata; status=%d", rec.Code)
 	}
 }
 
@@ -182,9 +224,10 @@ func TestCreateInviteRedirectDoesNotLeakToken(t *testing.T) {
 			baseURL: api.URL,
 			client:  api.Client(),
 		},
+		csrfToken: "test-csrf-token",
 	}
 
-	form := url.Values{}
+	form := url.Values{"csrf_token": {"test-csrf-token"}}
 	req := httptest.NewRequest(http.MethodPost, "https://admin.example/admin/invites/create", strings.NewReader(form.Encode()))
 	req.Host = "admin.example"
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
