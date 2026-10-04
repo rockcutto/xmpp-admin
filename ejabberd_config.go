@@ -365,13 +365,20 @@ func findHTTPAPI(doc *yaml.Node, out *EjabberdConfigSnapshot) {
 			if !strings.HasPrefix(apiPath, "/") {
 				apiPath = "/" + apiPath
 			}
-			ip := normalizeLocalHost(scalarString(mapValue(listener, "ip")))
+			endpointHost := normalizeLocalHost(scalarString(mapValue(listener, "ip")))
 			port := scalarOrDefault(mapValue(listener, "port"), "5280")
 			scheme := "http"
 			if strings.EqualFold(scalarString(mapValue(listener, "tls")), "true") {
 				scheme = "https"
+				// A TLS certificate is normally issued for the XMPP host, not for
+				// 127.0.0.1/::1. Use the configured vhost as the TLS name so a
+				// detected HTTPS API does not immediately fail hostname verification.
+				// Deployments using another certificate name can override EJABBERD_API.
+				if out.PrimaryHost != "" {
+					endpointHost = out.PrimaryHost
+				}
 			}
-			out.HTTPAPIURL = scheme + "://" + net.JoinHostPort(ip, port) + apiPath
+			out.HTTPAPIURL = scheme + "://" + net.JoinHostPort(endpointHost, port) + apiPath
 			out.HTTPAPIListenerFound = true
 			return
 		}

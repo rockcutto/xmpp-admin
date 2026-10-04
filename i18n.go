@@ -56,6 +56,9 @@ var messages = map[string]map[string]string{
 		"theme_light":            "Use light theme",
 		"mod_invites_disabled":   "mod_invites is not enabled in the loaded ejabberd configuration.",
 		"invalid_username":       "Invalid username.",
+		"invite_type_account_subscription": "Account + contact",
+		"invite_type_account_only":         "Account only",
+		"invite_type_roster_only":          "Contact only",
 	},
 	langRU: {
 		"invitations":            "Приглашения",
@@ -101,6 +104,9 @@ var messages = map[string]map[string]string{
 		"theme_light":            "Включить светлую тему",
 		"mod_invites_disabled":   "mod_invites не включён в загруженной конфигурации ejabberd.",
 		"invalid_username":       "Некорректный username.",
+		"invite_type_account_subscription": "Аккаунт + контакт",
+		"invite_type_account_only":         "Только аккаунт",
+		"invite_type_roster_only":          "Только контакт",
 	},
 }
 
@@ -115,6 +121,34 @@ func tr(lang, key string) string {
 		return value
 	}
 	return key
+}
+
+func inviteTypeLabel(lang, raw string) string {
+	switch strings.ToLower(strings.TrimSpace(raw)) {
+	case "account_subscription":
+		return tr(lang, "invite_type_account_subscription")
+	case "account_only":
+		return tr(lang, "invite_type_account_only")
+	case "roster_only":
+		return tr(lang, "invite_type_roster_only")
+	default:
+		raw = strings.TrimSpace(raw)
+		if raw == "" {
+			return "—"
+		}
+		return strings.ReplaceAll(raw, "_", " ")
+	}
+}
+
+func formatTimestamp(raw string) string {
+	raw = strings.TrimSpace(raw)
+	if raw == "" {
+		return "—"
+	}
+	if parsed, err := time.Parse(time.RFC3339Nano, raw); err == nil {
+		return parsed.UTC().Format("2006-01-02 15:04") + " UTC"
+	}
+	return raw
 }
 
 func requestLanguage(r *http.Request) string {

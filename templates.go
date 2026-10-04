@@ -142,7 +142,7 @@ const adminTemplate = `
   <div class="col-lg-8">
     <div class="card">
       <div class="table-responsive">
-        <table class="table table-vcenter card-table">
+        <table class="table table-vcenter card-table invites-table">
           <thead>
             <tr>
               <th>{{tr .Lang "created"}}</th>
@@ -157,11 +157,11 @@ const adminTemplate = `
           <tbody>
           {{range .Invites}}
             <tr>
-              <td class="text-nowrap">{{.CreatedAt}}</td>
-              <td>{{if .Inviter}}{{.Inviter}}{{else}}{{tr $.Lang "server_generated"}}{{end}}</td>
+              <td class="text-nowrap invite-date"><time datetime="{{.CreatedAt}}" title="{{.CreatedAt}}">{{formatTimestamp .CreatedAt}}</time></td>
+              <td class="invite-jid">{{if .Inviter}}{{.Inviter}}{{else}}{{tr $.Lang "server_generated"}}{{end}}</td>
               <td>{{if .AccountName}}<code>{{.AccountName}}@{{$.Domain}}</code>{{else}}—{{end}}</td>
-              <td class="text-nowrap">{{.Expires}}</td>
-              <td><span class="badge bg-secondary-lt">{{.Type}}</span></td>
+              <td class="text-nowrap invite-date"><time datetime="{{.Expires}}" title="{{.Expires}}">{{formatTimestamp .Expires}}</time></td>
+              <td><span class="badge bg-secondary-lt invite-type">{{inviteTypeLabel $.Lang .Type}}</span></td>
               <td>
                 {{if .Valid}}
                   <span class="badge bg-green-lt">{{tr $.Lang "active"}}</span>
@@ -170,13 +170,15 @@ const adminTemplate = `
                 {{end}}
               </td>
               <td class="text-end text-nowrap">
-                {{with safeURL .LandingPage}}<a class="btn btn-sm btn-outline-secondary" href="{{.}}" target="_blank" rel="noreferrer noopener">{{tr $.Lang "open"}}</a>{{else}}{{with safeURL .TokenURI}}<a class="btn btn-sm btn-outline-secondary" href="{{.}}">{{tr $.Lang "open"}}</a>{{end}}{{end}}
-                {{if .Valid}}
-                <form method="post" action="{{p "/admin/invites/revoke"}}" class="d-inline">
-                  <input type="hidden" name="token" value="{{.Token}}">
-                  <button class="btn btn-sm btn-outline-danger" type="submit">{{tr $.Lang "revoke"}}</button>
-                </form>
-                {{end}}
+                <div class="invite-actions">
+                  {{with safeURL .LandingPage}}<a class="btn btn-sm btn-outline-secondary" href="{{.}}" target="_blank" rel="noreferrer noopener">{{tr $.Lang "open"}}</a>{{else}}{{with safeURL .TokenURI}}<a class="btn btn-sm btn-outline-secondary" href="{{.}}">{{tr $.Lang "open"}}</a>{{end}}{{end}}
+                  {{if .Valid}}
+                  <form method="post" action="{{p "/admin/invites/revoke"}}">
+                    <input type="hidden" name="token" value="{{.Token}}">
+                    <button class="btn btn-sm btn-outline-danger" type="submit">{{tr $.Lang "revoke"}}</button>
+                  </form>
+                  {{end}}
+                </div>
               </td>
             </tr>
           {{else}}

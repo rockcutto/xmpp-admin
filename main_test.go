@@ -25,6 +25,21 @@ func TestLocaleCatalogsHaveSameKeys(t *testing.T) {
 	}
 }
 
+func TestInvitePresentationHelpers(t *testing.T) {
+	if got := formatTimestamp("2026-06-19T09:42:16Z"); got != "2026-06-19 09:42 UTC" {
+		t.Fatalf("unexpected formatted timestamp: %q", got)
+	}
+	if got := inviteTypeLabel(langEN, "account_subscription"); got != "Account + contact" {
+		t.Fatalf("unexpected account_subscription label: %q", got)
+	}
+	if got := inviteTypeLabel(langRU, "roster_only"); got != "Только контакт" {
+		t.Fatalf("unexpected roster_only label: %q", got)
+	}
+	if got := inviteTypeLabel(langEN, "future_type"); got != "future type" {
+		t.Fatalf("unexpected fallback invite type label: %q", got)
+	}
+}
+
 func TestBasePath(t *testing.T) {
 	cases := map[string]string{
 		"":            "",

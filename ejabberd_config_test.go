@@ -195,6 +195,32 @@ modules:
 }
 
 
+func TestTLSHTTPAPIListenerUsesVHostName(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "ejabberd.yml")
+	if err := os.WriteFile(path, []byte(`
+hosts: [example.org]
+listen:
+  - port: 5443
+    ip: "::"
+    module: ejabberd_http
+    tls: true
+    request_handlers:
+      /api: mod_http_api
+modules:
+  mod_invites: {}
+`), 0600); err != nil {
+		t.Fatal(err)
+	}
+	cfg, err := loadEjabberdConfig(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cfg.HTTPAPIURL != "https://example.org:5443/api" {
+		t.Fatalf("unexpected TLS API URL: %q", cfg.HTTPAPIURL)
+	}
+}
+
 func TestRepeatedIncludeWithDifferentFilters(t *testing.T) {
 	dir := t.TempDir()
 	include := filepath.Join(dir, "shared.yml")

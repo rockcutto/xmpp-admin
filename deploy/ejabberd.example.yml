@@ -1,18 +1,29 @@
-# Merge the relevant blocks into your existing ejabberd.yml.
+# Merge only the relevant blocks into your existing ejabberd.yml.
 # Do not replace a working configuration with this example.
-
-listen:
-  -
-    port: 5281
-    module: ejabberd_http
-    ip: 127.0.0.1
-    request_handlers:
-      /api: mod_http_api
+#
+# Reuse an existing ejabberd_http /api: mod_http_api listener when one
+# already exists. Add this loopback listener only when you need one:
+#
+# listen:
+#   -
+#     port: 5281
+#     module: ejabberd_http
+#     ip: 127.0.0.1
+#     request_handlers:
+#       /api: mod_http_api
 
 acl:
   xmpp_admin_api:
     user:
       - "xmpp-admin@example.org"
+
+# Commands with a host argument also pass ejabberd's configure access rule.
+# Merge these entries with the existing configure rule. Keep them as separate
+# allow entries: ACLs listed under one allow section are matched together.
+access_rules:
+  configure:
+    - allow: admin
+    - allow: xmpp_admin_api
 
 api_permissions:
   "XMPP Admin invite API":
@@ -21,14 +32,14 @@ api_permissions:
     who:
       acl: xmpp_admin_api
     what:
+      - list_invites
       - generate_invite
       - generate_invite_with_username
-      - list_invites
       - expire_invite_by_token
 
 # Keep the existing mod_invites/mod_register policy unchanged.
 # XMPP Admin reads it from ejabberd.yml.
 #
 # Never replace the command allowlist with "*".
-# Keep mod_http_api loopback-only unless you intentionally configure HTTPS
-# on a trusted private network.
+# Prefer a loopback API listener, or HTTPS with a certificate-valid hostname
+# on a trusted/private path. XMPP Admin rejects plaintext remote API URLs.

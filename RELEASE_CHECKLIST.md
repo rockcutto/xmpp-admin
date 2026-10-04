@@ -23,6 +23,8 @@ Use this before publishing a tag or deployment package.
 - [ ] `/healthz` does not expose sensitive server details.
 - [ ] `/readyz` is not exposed by the public reverse-proxy configuration.
 - [ ] Plain HTTP ejabberd API is loopback-only.
+- [ ] Dedicated API account can call the four invite commands but an unrelated command such as `status` returns HTTP 403.
+- [ ] TLS API endpoint uses a hostname valid for the configured certificate (or `EJABBERD_API` is explicitly set).
 
 ## ejabberd compatibility
 
@@ -43,6 +45,9 @@ Use this before publishing a tag or deployment package.
 - [ ] service listens only on the configured address.
 - [ ] nginx example passes `nginx -t` after integration.
 - [ ] `curl http://127.0.0.1:8090/xmpp-admin/healthz` returns `{"ok":true}`.
+- [ ] Local `/xmpp-admin/readyz` returns HTTP 200 after API credentials are configured.
+- [ ] Public `/xmpp-admin/readyz` is blocked by nginx.
+- [ ] Existing native user-created invites are visible through the deployed panel.
 - [ ] EN and RU both render.
 - [ ] light/dark/system theme switching works.
 

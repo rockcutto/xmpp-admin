@@ -39,10 +39,12 @@ func main() {
 	validateRuntimeConfig(cfg)
 
 	tpl, err := template.New("root").Funcs(template.FuncMap{
-		"tr":   tr,
-		"join": strings.Join,
-		"p":       func(path string) string { return joinBasePath(cfg.BasePath, path) },
-		"safeURL": safeExternalURL,
+		"tr":              tr,
+		"join":            strings.Join,
+		"p":               func(path string) string { return joinBasePath(cfg.BasePath, path) },
+		"safeURL":         safeExternalURL,
+		"formatTimestamp": formatTimestamp,
+		"inviteTypeLabel": inviteTypeLabel,
 	}).Parse(adminTemplate)
 	if err != nil {
 		log.Fatal(err)

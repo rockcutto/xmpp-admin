@@ -57,14 +57,22 @@ See [SECURITY.md](SECURITY.md) before publishing an Internet-facing installation
 
 Recommended:
 
-- Ubuntu 24.04+ with systemd, or another Debian-family release whose packaged Go is 1.22+;
+- Ubuntu/Debian-family host with systemd, or an equivalent manual deployment;
 - an existing ejabberd installation with `mod_invites`;
+- an ejabberd release that exposes the native invite commands listed below;
 - nginx or another HTTPS reverse proxy;
 - Go 1.22+ when building from source.
 
-The installer uses `apt`/`dpkg`; on an older Debian-family release, install Go 1.22+ yourself before running it.
+XMPP Admin intentionally does not depend on one exact ejabberd release number. Before deployment, verify that your installation provides the required commands:
 
-The integration uses the native `mod_invites` command API introduced in ejabberd 26.01. Development was validated against the 26.07 API shape; for production, use a currently supported and patched ejabberd release. Live ejabberd integration is still part of the release checklist rather than CI.
+```bash
+ejabberdctl help list_invites
+ejabberdctl help generate_invite
+ejabberdctl help generate_invite_with_username
+ejabberdctl help expire_invite_by_token
+```
+
+If `ejabberdctl` is not in `PATH`, use the control executable shipped with your ejabberd installation. Do not copy a version-specific binary path from another server.
 
 ## Quick install on Ubuntu
 
@@ -82,20 +90,27 @@ The installer:
 2. runs tests and `go vet`;
 3. builds the binary;
 4. installs it as `/usr/local/bin/xmpp-admin`;
-5. creates the `xmpp-admin` system user;
-6. finds the existing ejabberd config;
+5. creates the unprivileged `xmpp-admin` system user;
+6. discovers the existing ejabberd configuration;
 7. creates `/etc/xmpp-admin/xmpp-admin.env`;
 8. installs and starts a hardened systemd service;
 9. keeps the web service on `127.0.0.1:8090`;
-10. detects nginx and writes a reverse-proxy example without modifying nginx automatically.
+10. writes an nginx helper without modifying nginx automatically.
 
-The installer is safe to rerun and does **not** rewrite `ejabberd.yml` or restart ejabberd.
+The installer is safe to rerun. It preserves existing credentials in the environment file and does **not** rewrite or restart ejabberd.
 
-### Generated admin password
+### Two separate sets of credentials
 
-On the first installation, if `ADMIN_PASSWORD` is not supplied, the installer generates a random password and prints it once. Save it.
+XMPP Admin deliberately uses two independent identities:
 
-The environment file is stored at:
+| Purpose | Variables/account | Used by |
+|---|---|---|
+| Web panel login | `ADMIN_USER` / `ADMIN_PASSWORD` | Your browser via HTTP Basic Auth |
+| ejabberd API service account | `EJABBERD_API_USER` / `EJABBERD_API_PASSWORD` | XMPP Admin backend only |
+
+A normal XMPP account such as an administrator's personal JID is **not** the web-panel login unless you explicitly configure it that way.
+
+On first installation, if `ADMIN_PASSWORD` was not supplied, the installer generates a random web-panel password and prints it once. The persistent values are stored in:
 
 ```text
 /etc/xmpp-admin/xmpp-admin.env
@@ -105,31 +120,57 @@ with restrictive permissions.
 
 ## 1. Configure the ejabberd API
 
-If your existing ejabberd config already has a suitable local `mod_http_api` listener and dedicated API identity, XMPP Admin can use it.
+### Reuse an existing API listener when possible
 
-Otherwise merge the relevant parts from:
-
-```text
-deploy/ejabberd.example.yml
-```
-
-into your existing `ejabberd.yml`.
-
-Example:
+If ejabberd already has an `ejabberd_http` listener with:
 
 ```yaml
-listen:
-  -
-    port: 5281
-    module: ejabberd_http
-    ip: 127.0.0.1
-    request_handlers:
-      /api: mod_http_api
+request_handlers:
+  /api: mod_http_api
+```
 
+you do not need to add another listener.
+
+For a TLS listener, use an HTTPS URL whose hostname matches the certificate, for example:
+
+```text
+EJABBERD_API=https://xmpp.example.org:5443/api
+```
+
+For a loopback-only plaintext listener, use for example:
+
+```text
+EJABBERD_API=http://127.0.0.1:5281/api
+```
+
+XMPP Admin refuses plaintext HTTP API endpoints on non-loopback addresses. If automatic TLS listener discovery does not match your certificate topology, set `EJABBERD_API` explicitly.
+
+### Create a dedicated API account
+
+Do not reuse a human administrator account. Create a dedicated account such as `xmpp-admin@example.org` and keep its password out of shell history:
+
+```bash
+read -rsp 'ejabberd API password: ' API_PASS; echo
+sudo ejabberdctl register xmpp-admin example.org "$API_PASS"
+unset API_PASS
+```
+
+If the account already exists, use your installation's `change_password` command instead.
+
+### Grant only the four invite commands
+
+Merge the following into the existing ejabberd configuration. Do not replace unrelated ACLs, access rules, listeners, or API permissions.
+
+```yaml
 acl:
   xmpp_admin_api:
     user:
       - "xmpp-admin@example.org"
+
+access_rules:
+  configure:
+    - allow: admin
+    - allow: xmpp_admin_api
 
 api_permissions:
   "XMPP Admin invite API":
@@ -138,33 +179,62 @@ api_permissions:
     who:
       acl: xmpp_admin_api
     what:
+      - list_invites
       - generate_invite
       - generate_invite_with_username
-      - list_invites
       - expire_invite_by_token
 ```
 
-Replace `example.org` with your XMPP domain.
+The `configure` access rule is required because these API commands carry a `host` argument and ejabberd applies a host-level authorization gate before command execution.
 
-Create a dedicated API account using your normal ejabberd administration procedure. Avoid placing the password directly in shell history:
+**Keep the two `allow` entries separate.** This is correct:
 
-```bash
-read -rsp 'ejabberd API password: ' API_PASS; echo
-sudo ejabberdctl register xmpp-admin example.org "$API_PASS"
-unset API_PASS
+```yaml
+configure:
+  - allow: admin
+  - allow: xmpp_admin_api
 ```
 
-Then edit:
+This is **not** equivalent:
+
+```yaml
+configure:
+  allow:
+    - admin
+    - xmpp_admin_api
+```
+
+ACLs grouped inside one `allow` entry are matched together, so the second form can require the caller to match both ACLs and cause an unexpected HTTP 403.
+
+A ready-to-merge example is also provided in:
+
+```text
+deploy/ejabberd.example.yml
+```
+
+Reload the ejabberd configuration using the control command from your installation:
+
+```bash
+sudo ejabberdctl reload_config
+```
+
+Then configure the backend credentials:
 
 ```bash
 sudoedit /etc/xmpp-admin/xmpp-admin.env
 ```
 
-and set:
+Set:
 
 ```text
 EJABBERD_API_USER=xmpp-admin@example.org
 EJABBERD_API_PASSWORD=A-LONG-RANDOM-PASSWORD
+```
+
+and, when automatic detection is not appropriate:
+
+```text
+EJABBERD_API=https://xmpp.example.org:5443/api
 ```
 
 Restart only XMPP Admin:
@@ -173,7 +243,45 @@ Restart only XMPP Admin:
 sudo systemctl restart xmpp-admin
 ```
 
-Validate your ejabberd configuration with the tools appropriate for your installation before reloading it.
+### Verify backend authorization before exposing the UI
+
+Local liveness:
+
+```bash
+curl -i http://127.0.0.1:8090/xmpp-admin/healthz
+```
+
+Expected: HTTP 200 with `{"ok":true}`.
+
+Live ejabberd readiness:
+
+```bash
+curl -i http://127.0.0.1:8090/xmpp-admin/readyz
+```
+
+Expected: HTTP 200 with `{"ok":true}`.
+
+Also verify that the dedicated API account cannot call unrelated commands. The following test reads the API credentials from the protected environment file and prints only the HTTP status:
+
+```bash
+sudo bash -c '
+while IFS="=" read -r k v; do
+  case "$k" in
+    EJABBERD_API) API="$v" ;;
+    EJABBERD_API_USER) USER="$v" ;;
+    EJABBERD_API_PASSWORD) PASS="$v" ;;
+  esac
+done < /etc/xmpp-admin/xmpp-admin.env
+
+curl -sS -o /dev/null -w "HTTP %{http_code}\n" \
+  --basic --user "$USER:$PASS" \
+  -H "Content-Type: application/json" \
+  -d "{}" \
+  "$API/status"
+'
+```
+
+Expected: **HTTP 403**. If an unrelated administrative command returns 200, stop and tighten the existing `api_permissions` before exposing XMPP Admin.
 
 ## 2. Configure nginx
 
@@ -183,19 +291,22 @@ The installer writes a helper to:
 /etc/xmpp-admin/nginx-xmpp-admin.conf
 ```
 
-A repository copy is also available at:
+A repository copy is available at:
 
 ```text
 deploy/nginx.example.conf
 ```
 
-The default base path is `/xmpp-admin`.
-
-Add the locations to an existing HTTPS `server {}` block:
+Add those `location` blocks **inside the existing HTTPS `server {}` block** for the site:
 
 ```nginx
 location = /xmpp-admin {
     return 308 /xmpp-admin/;
+}
+
+# Local-only readiness probe.
+location = /xmpp-admin/readyz {
+    return 404;
 }
 
 location /xmpp-admin/ {
@@ -205,6 +316,7 @@ location /xmpp-admin/ {
     proxy_http_version 1.1;
 
     proxy_set_header Host $host;
+    proxy_set_header Authorization $http_authorization;
     proxy_set_header X-Real-IP $remote_addr;
     proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
     proxy_set_header X-Forwarded-Proto $scheme;
@@ -214,10 +326,17 @@ location /xmpp-admin/ {
 }
 ```
 
-Check and reload nginx:
+Keep any existing catch-all `location / { ... }` in place; nginx will choose the more specific `/xmpp-admin/` location.
+
+Validate before reload:
 
 ```bash
 sudo nginx -t
+```
+
+Only when the test succeeds:
+
+```bash
 sudo systemctl reload nginx
 ```
 
@@ -227,37 +346,20 @@ Then open:
 https://your-host.example/xmpp-admin/admin
 ```
 
-No new public port is required.
+Use `ADMIN_USER` and `ADMIN_PASSWORD` for the browser login.
 
-## 3. Verify the installation
+## 3. Production smoke test
 
-Service status:
+After the page opens successfully:
 
-```bash
-sudo systemctl status xmpp-admin
-```
+1. confirm existing native ejabberd invites are visible;
+2. create a normal invite;
+3. create an invite with a preselected username;
+4. revoke exactly one invite and confirm the other remains;
+5. create an invite from a normal XMPP client and confirm it appears after refresh;
+6. re-check that `/xmpp-admin/readyz` is not publicly reachable through nginx.
 
-Logs:
-
-```bash
-sudo journalctl -u xmpp-admin -f
-```
-
-Local health endpoint:
-
-```bash
-curl http://127.0.0.1:8090/xmpp-admin/healthz
-```
-
-Expected response:
-
-```json
-{"ok":true}
-```
-
-The health endpoint is liveness-only and intentionally does not disclose the XMPP domain, config path or API state.
-
-A second endpoint, `/readyz`, performs a live `list_invites` check against ejabberd. It is intended for local installation diagnostics only and the supplied nginx configuration does not expose it.
+XMPP Admin reads and writes the native `mod_invites` state; it does not maintain a second invitation database.
 
 ## Updating
 
